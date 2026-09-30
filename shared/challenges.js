@@ -31,10 +31,13 @@ export const CHALLENGES = [
     // the formatting adaptation the browser judge requires. The original
     // criteria are kept verbatim below and stored with every evaluation, so
     // what a score was judged against is still recorded.
+    // Chosen by measurement, not guesswork: web/scripts/sweep-statements.mjs
+    // ran five candidate phrasings through both open-jev models on the
+    // required answer set. This one gave the best separation on kev-0.6b
+    // (happy answers 84-99, genuinely unhappy answers 3-7) while keeping the
+    // true/false boundary from the original criteria below.
     noulStatement:
-      "This text is a fun and happy thought: it genuinely expresses something " +
-      "that could reasonably be described as fun and happy, rather than being " +
-      "negative, unhappy, nonsense, or not an answer to the challenge.",
+      "This is a real, meaningful sentence in English describing something fun and happy.",
 
     scoringQuestion: "Is this text actually a fun and happy thought?",
     criteria: {

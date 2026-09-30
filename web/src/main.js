@@ -8,6 +8,7 @@ import {
   validateName,
 } from "@shared/challenges.js";
 import { answerHash, normalizeAnswer } from "@shared/normalize.js";
+import { looksLikeRealText } from "@shared/gibberish.js";
 import { judgeInfo, loadJudge, scoreAnswer } from "./judge.js";
 import { fetchLeaderboard, leaderboardEnabled, loadConfig, submit } from "./api.js";
 import {
@@ -239,6 +240,13 @@ el.play.addEventListener("submit", async (event) => {
     answer = validateAnswer(el.answer.value);
   } catch (err) {
     return showError(err.message);
+  }
+
+  // A non-AI gate against pure keymash ("asdfghjkl"). It never scores
+  // anything - it only decides whether the real judge is asked at all.
+  // See shared/gibberish.js for why this exists.
+  if (!looksLikeRealText(answer)) {
+    return showError("Write an actual thought, not random characters.");
   }
 
   busy = true;

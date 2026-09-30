@@ -7,13 +7,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "verify-judge": "node scripts/verify-judge.mjs",
+    "test:browser": "node scripts/browser-test.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
     "open-jev": "^0.1.2"
   },
   "devDependencies": {
+    "playwright-core": "^1.48.0",
     "vite": "^6.0.0"
   }
 }
