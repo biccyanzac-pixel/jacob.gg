@@ -44,12 +44,17 @@ async function waitForJudgeReady(page) {
   await page.locator("#play").waitFor({ state: "visible", timeout: 10 * 60 * 1000 });
 }
 
-async function submitAndWait(page, name, answer) {
+// `expectedRows` must be the row count AFTER this submission - waiting on
+// "the attempts panel is visible" alone is a no-op after the first attempt,
+// since it stays visible from then on and the wait resolves instantly without
+// the actual (async, model-inference-backed) submission having finished.
+async function submitAndWait(page, name, answer, expectedRows) {
   await page.fill("#name", name);
   await page.fill("#answer", answer);
   await page.click("#submit");
   await page.waitForFunction(
-    () => document.getElementById("attempts")?.hidden === false,
+    (n) => document.querySelectorAll(".attempt-row").length === n,
+    expectedRows,
     { timeout: 5 * 60 * 1000 },
   );
   await page.waitForTimeout(500);
@@ -100,7 +105,7 @@ try {
   const individualScores = [];
 
   for (let i = 0; i < 3; i += 1) {
-    await submitAndWait(pageA, "Ada", ANSWERS[i]);
+    await submitAndWait(pageA, "Ada", ANSWERS[i], i + 1);
     const rows = await pageA.locator(".attempt-row").count();
     check(`attempt ${i + 1}: attempt list shows exactly ${i + 1} row(s)`, rows === i + 1, `rows=${rows}`);
 
@@ -182,7 +187,7 @@ try {
   await waitForJudgeReady(pageB);
   check("a second, independent browser session can load and play", true);
 
-  await submitAndWait(pageB, "Bea", "a password");
+  await submitAndWait(pageB, "Bea", "a password", 1);
   const bScore = Number((await pageB.locator(".attempt-score").allTextContents())[0]);
   check("second player gets a real per-attempt score", Number.isFinite(bScore) && bScore >= 0 && bScore <= 100);
 
