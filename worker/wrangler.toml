@@ -1,0 +1,15 @@
+name = "jacob-gg-leaderboard"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# Created by: wrangler d1 create jacob-gg-leaderboard
+# Then paste the printed database_id below (or pass --var at deploy time).
+[[d1_databases]]
+binding = "DB"
+database_name = "jacob-gg-leaderboard"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# The browser's origin(s) allowed to call this API. Restricts the shared
+# leaderboard to this game, not the whole internet.
+[vars]
+ALLOWED_ORIGIN = "https://biccyanzac-pixel.github.io"

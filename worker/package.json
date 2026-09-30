@@ -1,0 +1,15 @@
+{
+  "name": "jacob-gg-leaderboard-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute jacob-gg-leaderboard --remote --file=schema.sql",
+    "db:init:local": "wrangler d1 execute jacob-gg-leaderboard --local --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

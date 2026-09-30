@@ -446,3 +446,11 @@ textarea:focus-visible,
     animation-duration: 2.4s;
   }
 }
+
+/* Belt-and-braces: guarantee [hidden] always wins regardless of any later
+   rule's specificity tie in the cascade (observed: the native UA default for
+   [hidden] can lose a same-specificity tie-break against an author class
+   selector that comes later in the stylesheet). */
+[hidden] {
+  display: none !important;
+}

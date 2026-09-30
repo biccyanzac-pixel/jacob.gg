@@ -43,6 +43,15 @@ try {
   pageA.on("request", (req) => requests.push(req.url()));
   const consoleErrors = [];
   pageA.on("pageerror", (err) => consoleErrors.push(String(err)));
+  const consoleMessages = [];
+  pageA.on("console", (msg) => {
+    const line = `[${msg.type()}] ${msg.text()}`;
+    consoleMessages.push(line);
+    console.log(`  console: ${line}`);
+  });
+  pageA.on("requestfailed", (req) => {
+    console.log(`  request failed: ${req.url()} - ${req.failure()?.errorText}`);
+  });
 
   const response = await pageA.goto(URL, { waitUntil: "domcontentloaded", timeout: 60000 });
   check("page loads", response && response.ok(), `HTTP ${response?.status()}`);
@@ -55,15 +64,32 @@ try {
   await pageA.locator("#play").waitFor({ state: "visible", timeout: 10 * 60 * 1000 });
   check("judge finished loading, play form visible", true);
 
-  const preparingHidden = await pageA.locator("#preparing").isHidden();
-  check("loading indicator hidden once ready", preparingHidden);
+  try {
+    await pageA.locator("#preparing").waitFor({ state: "hidden", timeout: 5000 });
+    check("loading indicator hidden once ready", true);
+  } catch {
+    check("loading indicator hidden once ready", false);
+  }
 
-  // Submit a clearly happy answer.
+  // Submit a clearly happy answer. WASM inference in a headless/virtualized
+  // browser can be much slower than native Node, so this gets a generous
+  // timeout; what matters is whether it EVER completes and with what error.
   await pageA.fill("#name", "Ada");
   await pageA.fill("#answer", "I ate ice cream in the sunshine and laughed with my friend.");
+  console.log("clicking submit, waiting up to 5 minutes for a result...");
   await pageA.click("#submit");
 
-  await pageA.locator("#result").waitFor({ state: "visible", timeout: 60000 });
+  try {
+    await pageA.locator("#result").waitFor({ state: "visible", timeout: 5 * 60 * 1000 });
+  } catch (err) {
+    const errorBoxText = await pageA.locator("#error").textContent().catch(() => null);
+    console.log(`  #error box text: ${JSON.stringify(errorBoxText)}`);
+    console.log(`  submit button state: ${await pageA.locator("#submit").getAttribute("disabled").catch(() => "?")}`);
+    throw err;
+  }
+  // The score reveal counts up over ~800ms; wait for it to settle so we read
+  // the final value, not a mid-animation frame.
+  await pageA.waitForTimeout(1500);
   const scoreTextA = await pageA.locator("#score").textContent();
   const scoreA = Number(scoreTextA);
   check(
@@ -105,8 +131,12 @@ try {
     scoreAfterRefresh === scoreTextA,
     `before=${scoreTextA} after=${scoreAfterRefresh}`,
   );
-  const playHiddenAfterRefresh = await pageA.locator("#play").isHidden();
-  check("play form does not reappear after refresh (no re-submit)", playHiddenAfterRefresh);
+  try {
+    await pageA.locator("#play").waitFor({ state: "hidden", timeout: 5000 });
+    check("play form does not reappear after refresh (no re-submit)", true);
+  } catch {
+    check("play form does not reappear after refresh (no re-submit)", false);
+  }
 
   await ctxA.close();
 
@@ -121,7 +151,14 @@ try {
   await pageB.fill("#name", "Bea");
   await pageB.fill("#answer", "My dog farted and everyone started laughing.");
   await pageB.click("#submit");
-  await pageB.locator("#result").waitFor({ state: "visible", timeout: 60000 });
+  try {
+    await pageB.locator("#result").waitFor({ state: "visible", timeout: 5 * 60 * 1000 });
+  } catch (err) {
+    const errorBoxText = await pageB.locator("#error").textContent().catch(() => null);
+    console.log(`  #error box text: ${JSON.stringify(errorBoxText)}`);
+    throw err;
+  }
+  await pageB.waitForTimeout(1500);
   const scoreB = Number(await pageB.locator("#score").textContent());
   check("second player gets their own real score", Number.isInteger(scoreB) && scoreB >= 0 && scoreB <= 100, `score=${scoreB}`);
   check(
