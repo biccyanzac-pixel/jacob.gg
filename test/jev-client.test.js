@@ -8,7 +8,7 @@ import {
   createJevJudge,
   scoreFromNoul,
 } from "../lib/judge.js";
-import { jevResponse, stubFetch } from "./helpers.js";
+import { jevError, jevResponse, jevResponseFlat, stubFetch } from "./helpers.js";
 
 const CRITERIA = {
   true: "The text genuinely expresses something fun and happy.",
@@ -85,8 +85,72 @@ test("the request matches the documented systemone schema", async () => {
 
   assert.equal(result.noul, 0.8734);
   assert.equal(result.score, 87);
-  // The resolved version from the response, not the requested alias.
+  // The live envelope carries no model, so the requested alias is reported.
+  assert.equal(result.model, "typesafe/jev-1.13");
+  assert.deepEqual(result.usage, { input_tokens: 353, output_tokens: 21 });
+});
+
+// Regression test for the bug that broke the first real submission: the live
+// API wraps the result in { code, message, data: { result: { answers ... } } },
+// while the published examples show only the inner object. Reading the noul
+// from the top level found nothing and failed every real request.
+test("the noul is read out of the live data.result envelope", async () => {
+  const fetchImpl = stubFetch({
+    json: {
+      code: 0,
+      message: "ok",
+      data: {
+        result: {
+          answers: { verdict: { type: "noul", noul: 0.98 } },
+          usage: { input_tokens: 353, output_tokens: 21 },
+          elapsedMs: 1248,
+        },
+        creditsUsed: 1,
+      },
+    },
+  });
+
+  const result = await judgeWith(fetchImpl)({ state: "hello", question: "Is this happy?" });
+  assert.equal(result.noul, 0.98);
+  assert.equal(result.score, 98);
+});
+
+test("the flattened documented shape is still accepted", async () => {
+  const fetchImpl = stubFetch({ json: jevResponseFlat(0.4218) });
+  const result = await judgeWith(fetchImpl)({ state: "hello", question: "Is this happy?" });
+  assert.equal(result.noul, 0.4218);
+  assert.equal(result.score, 42);
+  // This shape does carry a model, so it wins over the requested alias.
   assert.equal(result.model, "jev-1.13.0");
+});
+
+test("a bare result envelope is accepted", async () => {
+  const fetchImpl = stubFetch({
+    json: { result: { answers: { verdict: { type: "noul", noul: 0.5 } } } },
+  });
+  const result = await judgeWith(fetchImpl)({ state: "hello", question: "Is this happy?" });
+  assert.equal(result.score, 50);
+});
+
+// Jev signals body-level failures with a non-zero code and HTTP 200, so the
+// status alone is not enough to tell success from failure.
+test("a non-zero code is an error even with HTTP 200", async () => {
+  const fetchImpl = stubFetch({ status: 200, json: jevError(4001, "invalid question type") });
+  await assert.rejects(
+    judgeWith(fetchImpl)({ state: "hello", question: "Is this happy?" }),
+    (err) => {
+      assert.equal(err.code, "JEV_API_ERROR");
+      assert.match(err.message, /4001/);
+      assert.match(err.message, /invalid question type/);
+      return true;
+    },
+  );
+});
+
+test("code 0 is treated as success", async () => {
+  const fetchImpl = stubFetch({ json: jevResponse(0.77) });
+  const result = await judgeWith(fetchImpl)({ state: "hello", question: "Is this happy?" });
+  assert.equal(result.score, 77);
 });
 
 test("player text goes only in state, never into the instructions", async () => {
@@ -141,11 +205,15 @@ test("a response whose noul is malformed is rejected and nothing is returned", a
 });
 
 test("a response missing the answer or the wrong type is rejected", async () => {
+  const wrap = (result) => ({ code: 0, message: "ok", data: { result, creditsUsed: 1 } });
   const cases = [
+    wrap({ answers: {} }),
+    wrap({}),
+    wrap({ answers: { verdict: { type: "score", score: 80 } } }),
+    wrap({ answers: { other_id: { type: "noul", noul: 0.5 } } }),
+    { code: 0, message: "ok", data: null },
     { model: "jev-1.13.0", answers: {} },
-    { model: "jev-1.13.0" },
     { model: "jev-1.13.0", answers: { verdict: { type: "score", score: 80 } } },
-    { model: "jev-1.13.0", answers: { other_id: { type: "noul", noul: 0.5 } } },
   ];
 
   for (const json of cases) {

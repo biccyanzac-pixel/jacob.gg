@@ -90,11 +90,35 @@ export function stubFetch({ status = 200, json = null, text = "", throws = null 
   return impl;
 }
 
-/** A well-formed Jev systemone response carrying one noul answer. */
-export function jevResponse(noul, { questionId = "verdict", model = "jev-1.13.0" } = {}) {
+/**
+ * A well-formed Jev systemone response carrying one noul answer, in the exact
+ * envelope the live API returns (verified against thejevai.com):
+ *
+ *   { code, message, data: { result: { answers, usage, elapsedMs }, creditsUsed } }
+ */
+export function jevResponse(noul, { questionId = "verdict", model = null } = {}) {
+  const result = {
+    answers: { [questionId]: { type: "noul", noul } },
+    usage: { input_tokens: 353, output_tokens: 21 },
+    elapsedMs: 1248,
+  };
+  if (model) result.model = model;
+  return { code: 0, message: "ok", data: { result, creditsUsed: 1 } };
+}
+
+/**
+ * The flattened shape the published documentation examples show. The client
+ * accepts it too, so a future API change back to it would not break scoring.
+ */
+export function jevResponseFlat(noul, { questionId = "verdict", model = "jev-1.13.0" } = {}) {
   return {
     model,
     answers: { [questionId]: { type: "noul", noul } },
-    usage: { input_tokens: 42, output_tokens: 7 },
+    usage: { input_tokens: 360, output_tokens: 39 },
   };
+}
+
+/** A Jev body-level error, which arrives with HTTP 200. */
+export function jevError(code = 4001, message = "invalid question type") {
+  return { code, message, data: null };
 }
