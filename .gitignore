@@ -1,0 +1,16 @@
+node_modules/
+
+# Secrets: ignore every .env variant, keep only the template
+.env
+.env.*
+!.env.example
+
+# SQLite database and its write-ahead log
+data/*.db
+data/*.db-wal
+data/*.db-shm
+!data/.gitkeep
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

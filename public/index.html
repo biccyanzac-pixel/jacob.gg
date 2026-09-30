@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Daily — jacob.gg</title>
+    <meta name="description" content="One question a day. Answer it and see where you land." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <a class="wordmark" href="/">jacob<span>.gg</span></a>
+      </header>
+
+      <section class="card" id="card" aria-busy="true">
+        <div class="card-top">
+          <span class="eyebrow" id="daynum">Daily</span>
+          <span class="eyebrow countdown" id="countdown"></span>
+        </div>
+
+        <p class="eyebrow challenge-label">Today's challenge</p>
+        <h1 class="prompt" id="prompt">Loading today's challenge…</h1>
+        <p class="hint" id="hint"></p>
+
+        <form class="play" id="play" hidden>
+          <label class="field">
+            <span class="label">Your name</span>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              maxlength="20"
+              autocomplete="nickname"
+              placeholder="e.g. jacob"
+              required
+            />
+          </label>
+
+          <label class="field">
+            <span class="label">Your answer</span>
+            <textarea
+              id="answer"
+              name="answer"
+              maxlength="280"
+              rows="3"
+              placeholder="Type it here…"
+              required
+            ></textarea>
+            <span class="counter" id="counter">0 / 280</span>
+          </label>
+
+          <p class="error" id="error" role="alert" hidden></p>
+
+          <button class="submit" id="submit" type="submit">
+            <span class="submit-label">Submit</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+          <p class="fineprint">One answer per day. No take-backs.</p>
+        </form>
+
+        <div class="result" id="result" hidden>
+          <p class="eyebrow">Your score</p>
+          <p class="score" id="score">0</p>
+
+          <p class="eyebrow answer-label">Your answer</p>
+          <blockquote class="your-answer" id="your-answer"></blockquote>
+        </div>
+      </section>
+
+      <section class="card board" id="board" hidden>
+        <div class="card-top">
+          <h2 class="eyebrow">Today's leaderboard</h2>
+          <span class="eyebrow" id="players"></span>
+        </div>
+        <ol class="rows" id="rows"></ol>
+        <p class="board-empty" id="board-empty" hidden>
+          Nobody has played yet today. Be the first.
+        </p>
+      </section>
+
+      <footer class="footer">
+        <p>New challenge every day at midnight UTC.</p>
+      </footer>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

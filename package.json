@@ -1,0 +1,19 @@
+{
+  "name": "jacob-gg-daily",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "A daily one-question game, scored once per unique answer by Jev.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/",
+    "test:live": "node --test test-live/"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
