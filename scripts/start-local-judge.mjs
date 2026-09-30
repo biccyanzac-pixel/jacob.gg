@@ -18,7 +18,7 @@
  * Usage: node scripts/start-local-judge.mjs [--stop] [--quiet]
  */
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -40,12 +40,22 @@ const PORT = Number(new URL(BASE_URL).port || 8000);
 // only the noul head - so the larger weights buy nothing here. Override with
 // JEVLOCAL_MODEL (e.g. Qwen/Qwen2.5-3B-Instruct) if you want the bigger one.
 const MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct";
+
 // Weights already on disk win over the hub id, so a normal start needs no
 // network at all and cannot be throttled part-way through a download.
-const VENDORED = path.join(HOME, "models", "Qwen2.5-1.5B-Instruct");
-const MODEL =
-  process.env.JEVLOCAL_MODEL ||
-  (fs.existsSync(path.join(VENDORED, "config.json")) ? VENDORED : MODEL_ID);
+//
+// The -fp32 directory is the same weights with config.json's torch_dtype
+// overridden (the file itself is a hard link, not a second copy). Qwen ships
+// bfloat16, and this CPU has no native bf16, so torch emulates it: measured
+// here, the same eight answers took ~45s each in bf16 and ~12s in fp32, for
+// scores within a point or two. It costs about 3.8 GB resident instead of
+// ~2 GB, which is the trade worth making on a 16 GB machine.
+const CANDIDATE_DIRS = [
+  path.join(HOME, "models", "Qwen2.5-1.5B-Instruct-fp32"),
+  path.join(HOME, "models", "Qwen2.5-1.5B-Instruct"),
+];
+const onDisk = CANDIDATE_DIRS.find((dir) => fs.existsSync(path.join(dir, "config.json")));
+const MODEL = process.env.JEVLOCAL_MODEL || onDisk || MODEL_ID;
 
 const LOG = process.env.JEVLOCAL_LOG || path.join(os.homedir(), "jev-local.log");
 const PIDFILE = path.join(os.tmpdir(), "jev-local.pid");
@@ -85,11 +95,22 @@ async function stop() {
     say("no recorded local judge pid; nothing to stop");
     return 0;
   }
+  // uvicorn runs the app in a child process, and that child is the one holding
+  // the port. Killing only the recorded parent leaves it orphaned and port
+  // 8000 still bound, so the whole tree has to go. Windows has no
+  // kill-process-group, hence taskkill /T.
   try {
-    process.kill(pid);
-    say(`stopped local judge (pid ${pid})`);
+    if (process.platform === "win32") {
+      const result = spawnSync("taskkill", ["/T", "/F", "/PID", String(pid)], {
+        encoding: "utf8",
+      });
+      if (result.status !== 0) throw new Error((result.stderr || result.stdout || "").trim());
+    } else {
+      process.kill(-pid);
+    }
+    say(`stopped local judge (pid ${pid} and its worker)`);
   } catch (err) {
-    say(`could not stop pid ${pid}: ${err.code ?? err.message}`);
+    say(`could not stop pid ${pid}: ${err.message}`);
   }
   try {
     fs.rmSync(PIDFILE);
@@ -121,9 +142,14 @@ function launch() {
       // hand the game fake scores. Non-negotiable.
       JEVLOCAL_SCORER: "hf",
       JEVLOCAL_MODEL: MODEL,
-      // Chat-template wrapping. The repo's leaderboard measures noul with it
-      // on, which is the only head this game uses.
-      JEVLOCAL_CHAT: process.env.JEVLOCAL_CHAT ?? "1",
+      // Plain prompting, not chat-template wrapping. jev-local pairs chat mode
+      // with a noul temperature of 0.25, which is sharp enough to collapse
+      // almost every answer to 0 or 100 - measured here, "a cup of tea in the
+      // morning" scored 0 and a laughing baby scored 27. Plain mode uses T=1.0
+      // and gave a usable spread on the same answers (95 / 84 / 78 happy, 16
+      // mild, 1 neutral, 1 bleak, 3 nonsense) with the ranking intact. Both
+      // are shipped jev-local configurations; this one suits a leaderboard.
+      JEVLOCAL_CHAT: process.env.JEVLOCAL_CHAT ?? "0",
       // Hugging Face's Xet transfer path stalled at 0 bytes on this machine
       // while the plain CDN sustained ~9 MB/s. Disabling it makes the
       // first-run weight download finish instead of hanging.

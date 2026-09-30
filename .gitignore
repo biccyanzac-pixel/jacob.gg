@@ -11,6 +11,9 @@ data/*.db-wal
 data/*.db-shm
 !data/.gitkeep
 
+# Web build output
+web/dist/
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

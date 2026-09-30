@@ -1,0 +1,70 @@
+name: Deploy game to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "shared/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push supersedes an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci --no-fund --no-audit
+
+      - name: Build
+        working-directory: web
+        env:
+          # Project sites are served from /<repo>/, so assets need that prefix.
+          BASE_PATH: /jacob.gg/
+        run: npm run build
+
+      - name: Show what will be published
+        working-directory: web
+        run: |
+          echo "--- dist ---"
+          find dist -type f | sort
+          echo "--- total ---"
+          du -sh dist
+          echo "--- assert no secrets in the bundle ---"
+          if grep -rInE "sk_[A-Za-z0-9]{16,}|gho_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|JEV_API_KEY *= *[^ ]" dist; then
+            echo "SECRET-SHAPED STRING FOUND IN BUILD OUTPUT"; exit 1
+          fi
+          echo "clean"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
