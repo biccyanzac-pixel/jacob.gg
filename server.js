@@ -215,7 +215,7 @@ app.use((err, req, res, next) => {
   if (err.code === "JEV_UNCONFIGURED" || err.code === "JEV_UNAUTHORIZED") {
     return res.status(503).json({
       error: "scoring_unconfigured",
-      message: "Scoring is not configured. Set JEV_API_KEY and restart the server.",
+      message: "Scoring is not configured. Add JEV_API_KEY to .env, then submit again.",
     });
   }
 
@@ -244,7 +244,7 @@ const server = app.listen(PORT, () => {
   console.log(`challenge: ${challenge.id} | judge: ${judgeModel}`);
   if (!process.env.JEV_API_KEY) {
     console.warn(
-      "warning: no JEV_API_KEY set. Copy .env.example to .env and add a key,\n" +
+      "warning: no JEV_API_KEY set. Add your key to .env (no restart needed),\n" +
         "         or new answers cannot be scored (stored ones still work).",
     );
   }
