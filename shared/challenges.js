@@ -8,15 +8,19 @@
  * submission whose challenge id does not match.
  */
 
-export const SCORING_VERSION = 2;
+export const SCORING_VERSION = 3;
+// Bumped from 2: scores are now full-precision (noul * 100, displayed to two
+// decimal places instead of rounded to an integer) and each player gets up to
+// three attempts per challenge instead of one. Both are scoring-semantics
+// changes, so v2 evaluations are never compared against v3 ones.
+export const MAX_ATTEMPTS = 3;
 
 export const CHALLENGES = [
   {
     slug: "fun-happy-thought",
-    // Bumped from 1: the judge changed from hosted Jev to an in-browser
-    // open-weights noul model, and the proposition is phrased as a statement
-    // rather than a question + criteria object. Evaluations from version 1 are
-    // never reused or recalculated under version 2.
+    // v1: hosted Jev. v2: moved to the in-browser open-weights noul model.
+    // v3: full-precision two-decimal scores and three attempts per day.
+    // Evaluations never carry across a version bump.
     scoringVersion: SCORING_VERSION,
 
     // Player-facing.
@@ -90,12 +94,25 @@ export function challengeForDay(dayKey = todayKey()) {
 }
 
 /**
- * The game's score is the noul as a percentage. Nothing else derives it.
+ * The game's score is the noul as a percentage, at full precision. Nothing
+ * else derives it, and nothing rounds it here - rounding happens only at
+ * display time (formatScore), never before storage or comparison, so the
+ * leaderboard always sorts and ties on the real value.
  *
- *   0 -> 0, 0.4218 -> 42, 0.8734 -> 87, 0.995 -> 100, 1 -> 100
+ *   0 -> 0, 0.4218 -> 42.18, 0.873742 -> 87.3742, 1 -> 100
  */
 export function scoreFromNoul(noul) {
-  return Math.round(assertNoul(noul) * 100);
+  return assertNoul(noul) * 100;
+}
+
+/**
+ * Two decimal places for display. This does not add precision the model
+ * didn't provide - open-jev's noul is already a float with far more than two
+ * decimal digits of real precision (it's a softmax output, not a rounded
+ * value), so two places is display formatting, not fabrication.
+ */
+export function formatScore(score) {
+  return (Math.round(score * 100) / 100).toFixed(2);
 }
 
 /** A noul must be present, a real number, finite and within [0, 1]. */

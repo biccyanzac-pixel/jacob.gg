@@ -1,13 +1,17 @@
 /**
- * Per-browser local state: the player's own result for a challenge, their
+ * Per-browser local state: this player's attempts at today's challenge, their
  * name, and the local-only leaderboard used when no backend is configured.
  *
- * This is convenience and offline fallback, not the authority. When a backend
- * is configured it enforces one submission per player per challenge; this only
- * stops the same browser from replaying the form.
+ * When a shared backend is configured this is a cache/fallback, not the
+ * authority - the server independently tracks and enforces the 3-attempt
+ * limit (see worker/src/index.js), and on load the client reconciles against
+ * the server's own record of this player's attempts. Without a backend, this
+ * is all there is, and it is enforced here instead.
  */
 
-const RESULT_PREFIX = "jgg.result.";
+import { MAX_ATTEMPTS } from "@shared/challenges.js";
+
+const ATTEMPTS_PREFIX = "jgg.attempts.";
 const NAME_KEY = "jgg.name";
 const LOCAL_BOARD_PREFIX = "jgg.localboard.";
 
@@ -44,17 +48,37 @@ export function rememberName(name) {
   }
 }
 
-export function savedResult(challengeId) {
-  const value = read(RESULT_PREFIX + challengeId);
-  if (!value || typeof value.score !== "number" || typeof value.answer !== "string") return null;
-  return value;
+// --- attempts ----------------------------------------------------------
+// Each attempt: { attemptNumber, answer, score, noul, at }. Score is full
+// precision; formatting to two decimals happens only at render time.
+
+export function localAttempts(challengeId) {
+  const rows = read(ATTEMPTS_PREFIX + challengeId);
+  return Array.isArray(rows) ? rows : [];
 }
 
-export function saveResult(challengeId, result) {
-  write(RESULT_PREFIX + challengeId, result);
+/** Append an attempt locally. Silently caps at MAX_ATTEMPTS. */
+export function addLocalAttempt(challengeId, attempt) {
+  const rows = localAttempts(challengeId);
+  if (rows.length >= MAX_ATTEMPTS) return rows;
+  const next = [...rows, { ...attempt, attemptNumber: rows.length + 1 }];
+  write(ATTEMPTS_PREFIX + challengeId, next);
+  return next;
+}
+
+/** Replace the whole attempt list - used to reconcile with the server's copy. */
+export function setLocalAttempts(challengeId, attempts) {
+  write(ATTEMPTS_PREFIX + challengeId, attempts);
+}
+
+export function bestAttempt(attempts) {
+  if (!attempts.length) return null;
+  return attempts.reduce((best, a) => (a.score > best.score ? a : best), attempts[0]);
 }
 
 // --- local-only leaderboard ------------------------------------------------
+// Used only when no shared backend is configured. Keeps each name's best
+// score, mirroring how the real backend ranks players.
 
 export function localBoard(challengeId) {
   const rows = read(LOCAL_BOARD_PREFIX + challengeId);

@@ -1,10 +1,9 @@
 /**
- * Leaderboard client.
- *
- * The scoring happens in the browser, so the only thing the backend does is
- * keep the shared leaderboard: validate a submission, store it once, and hand
- * back the board. If no backend is configured the game still plays and keeps
- * the player's own result locally - it just cannot show other people.
+ * Shared backend client. The backend never runs a model - scoring happens
+ * entirely in the player's browser. Its job is: be the one thing every
+ * player's browser agrees on, so attempts and the leaderboard are real shared
+ * state instead of per-device localStorage, and the 3-attempt limit is
+ * actually enforced rather than just asked nicely.
  *
  * config.json is read at runtime (not baked into the bundle) so the backend
  * can be switched on later by editing one file, with no rebuild.
@@ -58,7 +57,8 @@ async function call(path, options = {}) {
 /**
  * A server-issued player identity. The id is signed by the server, so a
  * browser cannot invent one: submissions carry the token and the server
- * verifies it. Stored locally so the same browser keeps the same identity.
+ * verifies it. Stored locally so the same browser keeps the same identity
+ * (and therefore the same attempt count) across reloads.
  */
 export async function session() {
   const cached = readSession();
@@ -86,7 +86,7 @@ function readSession() {
   }
 }
 
-/** Today's shared leaderboard. */
+/** Today's shared leaderboard (one row per player: their best attempt). */
 export async function fetchLeaderboard(challengeId) {
   const cached = readSession();
   const query = new URLSearchParams({ challengeId });
@@ -95,9 +95,22 @@ export async function fetchLeaderboard(challengeId) {
 }
 
 /**
- * Submit a played answer. The server recomputes today's challenge, re-derives
- * the score from the noul, checks the hash and stores at most one submission
- * per player per challenge.
+ * This player's own attempts at a challenge, as the server has them - the
+ * authoritative record, used to restore state on load/refresh even if
+ * localStorage was cleared (as long as the session token survives) and to
+ * make the 3-attempt limit a server fact, not just a client promise.
+ */
+export async function fetchAttempts(challengeId) {
+  const cached = readSession();
+  if (!cached?.playerId) return { attempts: [] };
+  const query = new URLSearchParams({ challengeId, playerId: cached.playerId });
+  return call(`/api/attempts?${query}`);
+}
+
+/**
+ * Submit one attempt. The server independently recomputes today's challenge,
+ * re-derives the score from the noul, checks the hash, assigns the attempt
+ * number itself (never trusts a client-sent one) and rejects a 4th attempt.
  */
 export async function submit(payload) {
   const { playerId, token } = await session();

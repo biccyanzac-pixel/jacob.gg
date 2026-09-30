@@ -454,3 +454,102 @@ textarea:focus-visible,
 [hidden] {
   display: none !important;
 }
+
+/* --- attempts (3-per-day) ------------------------------------------------ */
+
+.attempts-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.attempts {
+  margin-top: 1.5rem;
+}
+
+.attempt-list {
+  list-style: none;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.attempt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.8rem;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.attempt-row.best {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.attempt-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.attempt-row.best .attempt-label {
+  color: var(--accent);
+}
+
+.attempt-row.best .attempt-label::after {
+  content: " — best";
+}
+
+.attempt-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.attempt-score.good {
+  color: var(--good);
+}
+
+.attempt-score.bad {
+  color: var(--bad);
+}
+
+.attempts-done {
+  margin: 1.1rem 0 0;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 10px;
+  text-align: center;
+}
+
+/* --- indeterminate progress (model initializing, no byte progress) ------- */
+
+.meter-fill.indeterminate {
+  width: 40% !important;
+  animation: meter-sweep 1.1s ease-in-out infinite;
+}
+
+@keyframes meter-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meter-fill.indeterminate {
+    animation: none;
+    width: 100% !important;
+    opacity: 0.5;
+  }
+}

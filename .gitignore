@@ -17,3 +17,6 @@ web/dist/
 # OS / editor noise
 .DS_Store
 Thumbs.db
+
+# Local wrangler dev state (D1/KV/R2 emulation, never real data)
+worker/.wrangler/

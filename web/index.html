@@ -28,8 +28,9 @@
         <p class="eyebrow challenge-label">Today's challenge</p>
         <h1 class="prompt" id="prompt">Loading…</h1>
         <p class="hint" id="hint"></p>
+        <p class="attempts-note" id="attempts-note">3 attempts — highest score counts</p>
 
-        <!-- Judge loading -->
+        <!-- Judge loading: distinct phases, never an unexplained spinner -->
         <div class="preparing" id="preparing">
           <div class="preparing-row">
             <span class="spinner-ring" aria-hidden="true"></span>
@@ -39,7 +40,7 @@
             <div class="meter-fill" id="preparing-bar"></div>
           </div>
           <p class="preparing-note" id="preparing-note">
-            One-time download, then it is cached for next time.
+            One-time download, then it is cached on this device for next time.
           </p>
         </div>
 
@@ -66,18 +67,24 @@
           <p class="error" id="error" role="alert" hidden></p>
 
           <button class="submit" id="submit" type="submit">
-            <span class="submit-label">Submit</span>
+            <span class="submit-label">Submit attempt <span id="attempt-number">1</span> of 3</span>
             <span class="spinner" aria-hidden="true"></span>
           </button>
-          <p class="fineprint">One answer per day. No take-backs.</p>
+          <p class="fineprint">Up to 3 attempts. Your best score counts.</p>
         </form>
 
-        <!-- Result -->
-        <div class="result" id="result" hidden>
-          <p class="eyebrow">Your score</p>
-          <p class="score" id="score">0</p>
-          <p class="eyebrow answer-label">Your answer</p>
-          <blockquote class="your-answer" id="your-answer"></blockquote>
+        <!-- Attempts so far + best score. Shown once at least one attempt exists. -->
+        <div class="attempts" id="attempts" hidden>
+          <p class="eyebrow">Best score</p>
+          <p class="score" id="best-score">0.00</p>
+          <p class="eyebrow answer-label">Best answer</p>
+          <blockquote class="your-answer" id="best-answer"></blockquote>
+
+          <ol class="attempt-list" id="attempt-list"></ol>
+
+          <p class="attempts-done" id="attempts-done" hidden>
+            All 3 attempts used today. Come back tomorrow for a new challenge.
+          </p>
         </div>
       </section>
 
@@ -92,7 +99,7 @@
       </section>
 
       <footer class="footer">
-        <p>New challenge every day at midnight UTC.</p>
+        <p>New challenge every day at midnight UTC. Ties broken by earliest submission.</p>
       </footer>
     </main>
 

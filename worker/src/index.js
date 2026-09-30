@@ -3,8 +3,9 @@
  *
  * Scoring happens entirely in the player's browser (open-jev/kev-0.6b) - this
  * worker never runs a model and holds no AI API key. Its job is narrower: be
- * the one thing every player's browser agrees on, so the leaderboard is real
- * shared state instead of per-device localStorage.
+ * the one thing every player's browser agrees on, so attempts and the
+ * leaderboard are real shared state instead of per-device localStorage, and
+ * "3 attempts" is a database fact instead of a client promise.
  *
  * Because inference is client-side, a sophisticated player COULD alter their
  * own score before it reaches here. This worker does not try to re-run the
@@ -17,27 +18,37 @@
  *   - answerHash must match a server-side recompute of the same
  *     normalize+hash the browser used (shared/normalize.js, ported below) -
  *     a mismatched hash means the payload was tampered with in transit.
- *   - noul must be a finite number in [0, 1]; score must be exactly
- *     Math.round(noul * 100). A request where they disagree is rejected -
- *     it never fell out of a real model call.
- *   - one row per (player_id, challenge_id), enforced by a UNIQUE index, not
- *     just application logic.
+ *   - noul must be a finite number in [0, 1]; score must equal noul * 100
+ *     (within float rounding tolerance). A request where they disagree is
+ *     rejected - it never fell out of a real model call.
+ *   - attempt_number is always assigned here as (existing row count + 1),
+ *     never accepted from the client, and a player at 3 rows is rejected
+ *     before a fourth is even considered.
+ *   - one row per (player_id, challenge_id, attempt_number), enforced by a
+ *     database constraint, not just application logic.
  *   - player_id is never client-chosen: it is issued by /api/session and
  *     paired with a server-generated token; a submission must present a
  *     token whose hash matches the stored one for that player_id.
+ *   - submissions are INSERT-only. Nothing here ever UPDATEs or DELETEs a
+ *     row, so a past attempt cannot be altered after the fact.
  *
  * What this does NOT defend against, honestly: a browser that runs a real
  * model but lies about the resulting noul. There is no server-side model run
  * here to catch that, by design (that would need paid inference and defeat
  * the entire point of this architecture). That is the documented, accepted
- * trade-off for a free, local-inference game - see README.
+ * trade-off for a free, local-inference game - see README.md.
  */
 
-const SCORING_VERSION = 2;
+const SCORING_VERSION = 3;
 const CHALLENGE_SLUG = "fun-happy-thought";
 const MAX_NAME = 20;
 const MAX_ANSWER = 280;
+const MAX_ATTEMPTS = 3;
 const BOARD_SIZE = 10;
+// Float equality guard for score === noul * 100: generous enough for normal
+// floating-point roundoff, tight enough that a meaningfully different number
+// still fails.
+const SCORE_EPSILON = 0.01;
 
 // --- shared logic, ported from shared/normalize.js and shared/challenges.js
 // so the worker can recompute independently of whatever the client sent. ---
@@ -163,9 +174,7 @@ async function handleSession(request, env) {
   const playerId = uuid();
   const token = uuid();
   const tokenHash = await sha256Hex(token);
-  await env.DB.prepare(
-    `INSERT INTO players (id, token_hash, created_at) VALUES (?, ?, ?)`,
-  )
+  await env.DB.prepare(`INSERT INTO players (id, token_hash, created_at) VALUES (?, ?, ?)`)
     .bind(playerId, tokenHash, new Date().toISOString())
     .run();
   return json({ playerId, token }, { env });
@@ -183,6 +192,27 @@ async function verifyPlayer(env, playerId, token) {
   return row.token_hash === tokenHash;
 }
 
+function attemptView(row) {
+  return {
+    attemptNumber: row.attempt_number,
+    answer: row.original_answer,
+    score: row.score,
+    at: row.submitted_at,
+  };
+}
+
+async function fetchPlayerAttempts(env, challId, playerId) {
+  const { results } = await env.DB.prepare(
+    `SELECT attempt_number, original_answer, score, submitted_at
+       FROM submissions
+      WHERE challenge_id = ? AND player_id = ?
+      ORDER BY attempt_number ASC`,
+  )
+    .bind(challId, playerId)
+    .all();
+  return (results ?? []).map(attemptView);
+}
+
 function boardRow(row, rank, playerId) {
   return {
     rank,
@@ -193,11 +223,29 @@ function boardRow(row, rank, playerId) {
   };
 }
 
+/**
+ * The leaderboard: one row per player, their single best attempt.
+ *
+ * Tie-break rule (documented here because it matters and is easy to get
+ * silently inconsistent): ties sort by the *earliest* submission time of the
+ * player's best-scoring attempt, then by that submission's id as a final,
+ * fully deterministic tiebreak. Both are stable across repeated reads - the
+ * same two tied players always come out in the same order.
+ */
 async function fetchBoard(env, challId, playerId) {
   const { results } = await env.DB.prepare(
-    `SELECT player_id, display_name, original_answer, score, submitted_at, id
-       FROM submissions
-      WHERE challenge_id = ?
+    `WITH best AS (
+       SELECT player_id, display_name, original_answer, score, submitted_at, id,
+              ROW_NUMBER() OVER (
+                PARTITION BY player_id
+                ORDER BY score DESC, submitted_at ASC, id ASC
+              ) AS rn
+         FROM submissions
+        WHERE challenge_id = ?
+     )
+     SELECT player_id, display_name, original_answer, score, submitted_at, id
+       FROM best
+      WHERE rn = 1
       ORDER BY score DESC, submitted_at ASC, id ASC`,
   )
     .bind(challId)
@@ -217,6 +265,19 @@ async function handleLeaderboard(request, env) {
   const playerId = url.searchParams.get("playerId");
   if (!challId) return fail("bad_request", "challengeId is required.", 400, env);
   return json(await fetchBoard(env, challId, playerId), { env });
+}
+
+/** This player's own attempts at a challenge - lets a fresh page load (or a
+ * cleared localStorage, as long as the session token survives) restore state
+ * from the server rather than only trusting the browser. */
+async function handleAttempts(request, env) {
+  const url = new URL(request.url);
+  const challId = url.searchParams.get("challengeId");
+  const playerId = url.searchParams.get("playerId");
+  if (!challId || !playerId) {
+    return fail("bad_request", "challengeId and playerId are required.", 400, env);
+  }
+  return json({ attempts: await fetchPlayerAttempts(env, challId, playerId) }, { env });
 }
 
 async function handlePlay(request, env, ip) {
@@ -261,8 +322,9 @@ async function handlePlay(request, env, ip) {
   if (!Number.isFinite(noul) || noul < 0 || noul > 1) {
     return fail("bad_noul", "Invalid score data.", 400, env);
   }
-  const score = Math.round(noul * 100);
-  if (Number(body.score) !== score) {
+  const expectedScore = noul * 100;
+  const submittedScore = Number(body.score);
+  if (!Number.isFinite(submittedScore) || Math.abs(submittedScore - expectedScore) > SCORE_EPSILON) {
     return fail("score_mismatch", "Score does not match the reported probability.", 400, env);
   }
 
@@ -281,43 +343,82 @@ async function handlePlay(request, env, ip) {
 
   const model = typeof body.model === "string" && body.model ? body.model.slice(0, 120) : "unknown";
 
-  try {
-    await env.DB.prepare(
-      `INSERT INTO submissions
-         (id, player_id, challenge_id, day_key, scoring_version, display_name,
-          original_answer, normalized_answer, answer_hash, noul, score, model, submitted_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  // Assign the attempt number here, from an actual row count - never from
+  // anything the client sent. Retried a few times against the unique
+  // (player_id, challenge_id, attempt_number) constraint to stay correct if
+  // two requests from the same player land at the same moment; D1 workers
+  // normally serialise a single player's requests, so this is a safety net,
+  // not the primary mechanism.
+  let inserted = false;
+  let attemptNumber = null;
+  for (let tries = 0; tries < 3 && !inserted; tries += 1) {
+    const { count } = await env.DB.prepare(
+      `SELECT COUNT(*) AS count FROM submissions WHERE player_id = ? AND challenge_id = ?`,
     )
-      .bind(
-        uuid(),
-        playerId,
-        expectedChallengeId,
-        day,
-        SCORING_VERSION,
-        name,
-        answer,
-        normalized,
-        expectedHash,
-        noul,
-        score,
-        model,
-        new Date().toISOString(),
-      )
-      .run();
-  } catch (err) {
-    // UNIQUE(player_id, challenge_id) violation: already played today.
-    if (String(err.message || err).includes("UNIQUE")) {
-      const board = await fetchBoard(env, expectedChallengeId, playerId);
-      return json(
-        { error: "already_played", message: "You have already played today.", leaderboard: board },
-        { status: 409, env },
+      .bind(playerId, expectedChallengeId)
+      .first();
+
+    if (count >= MAX_ATTEMPTS) {
+      return fail(
+        "max_attempts",
+        `All ${MAX_ATTEMPTS} attempts are already used for today.`,
+        409,
+        env,
       );
     }
-    throw err;
+
+    attemptNumber = count + 1;
+    try {
+      await env.DB.prepare(
+        `INSERT INTO submissions
+           (id, player_id, challenge_id, day_key, scoring_version, attempt_number,
+            display_name, original_answer, normalized_answer, answer_hash, noul, score,
+            model, submitted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          uuid(),
+          playerId,
+          expectedChallengeId,
+          day,
+          SCORING_VERSION,
+          attemptNumber,
+          name,
+          answer,
+          normalized,
+          expectedHash,
+          noul,
+          expectedScore,
+          model,
+          new Date().toISOString(),
+        )
+        .run();
+      inserted = true;
+    } catch (err) {
+      if (!String(err.message || err).includes("UNIQUE")) throw err;
+      // Someone else's request won this attempt-number slot; loop and
+      // recompute the count for the next one.
+    }
   }
 
-  const board = await fetchBoard(env, expectedChallengeId, playerId);
-  return json({ result: { answer, score }, leaderboard: board }, { env });
+  if (!inserted) {
+    return fail(
+      "max_attempts",
+      `All ${MAX_ATTEMPTS} attempts are already used for today.`,
+      409,
+      env,
+    );
+  }
+
+  const [board, playerAttempts] = await Promise.all([
+    fetchBoard(env, expectedChallengeId, playerId),
+    fetchPlayerAttempts(env, expectedChallengeId, playerId),
+  ]);
+
+  return json(
+    { result: { answer, score: expectedScore, attemptNumber }, attempts: playerAttempts, leaderboard: board },
+    { env },
+  );
 }
 
 export default {
@@ -334,6 +435,9 @@ export default {
       }
       if (url.pathname === "/api/leaderboard" && request.method === "GET") {
         return await handleLeaderboard(request, env);
+      }
+      if (url.pathname === "/api/attempts" && request.method === "GET") {
+        return await handleAttempts(request, env);
       }
       if (url.pathname === "/api/play" && request.method === "POST") {
         const ip = request.headers.get("CF-Connecting-IP") || "unknown";

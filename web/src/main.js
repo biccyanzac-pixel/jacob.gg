@@ -1,7 +1,9 @@
 import "./style.css";
 import {
   MAX_ANSWER,
+  MAX_ATTEMPTS,
   challengeForDay,
+  formatScore,
   msUntilNextDay,
   todayKey,
   validateAnswer,
@@ -9,15 +11,17 @@ import {
 } from "@shared/challenges.js";
 import { answerHash, normalizeAnswer } from "@shared/normalize.js";
 import { looksLikeRealText } from "@shared/gibberish.js";
-import { judgeInfo, loadJudge, scoreAnswer } from "./judge.js";
-import { fetchLeaderboard, leaderboardEnabled, loadConfig, submit } from "./api.js";
+import { PHASE, judgeInfo, loadJudge, scoreAnswer } from "./judge.js";
+import { fetchAttempts, fetchLeaderboard, leaderboardEnabled, loadConfig, submit } from "./api.js";
 import {
+  addLocalAttempt,
   addToLocalBoard,
+  bestAttempt,
+  localAttempts,
   localBoard,
   rememberName,
-  saveResult,
   savedName,
-  savedResult,
+  setLocalAttempts,
 } from "./store.js";
 
 const $ = (id) => document.getElementById(id);
@@ -26,6 +30,7 @@ const el = {
   countdown: $("countdown"),
   prompt: $("prompt"),
   hint: $("hint"),
+  attemptsNote: $("attempts-note"),
   preparing: $("preparing"),
   preparingText: $("preparing-text"),
   preparingBar: $("preparing-bar"),
@@ -36,9 +41,12 @@ const el = {
   counter: $("counter"),
   error: $("error"),
   submit: $("submit"),
-  result: $("result"),
-  score: $("score"),
-  yourAnswer: $("your-answer"),
+  attemptNumber: $("attempt-number"),
+  attempts: $("attempts"),
+  bestScore: $("best-score"),
+  bestAnswer: $("best-answer"),
+  attemptList: $("attempt-list"),
+  attemptsDone: $("attempts-done"),
   board: $("board"),
   rows: $("rows"),
   players: $("players"),
@@ -47,6 +55,11 @@ const el = {
 };
 
 const challenge = challengeForDay(todayKey());
+
+// The player's attempts at today's challenge, authoritative copy once a
+// backend is configured (reconciled from the server on load and after every
+// submit), otherwise the local-only record.
+let attempts = [];
 
 // --- small helpers ---------------------------------------------------------
 
@@ -73,7 +86,7 @@ function tickCountdown() {
 }
 setInterval(tickCountdown, 1000);
 
-// --- rendering -------------------------------------------------------------
+// --- rendering: challenge ----------------------------------------------
 
 function renderChallenge() {
   el.daynum.textContent = `Daily #${challenge.dayNumber}`;
@@ -83,34 +96,57 @@ function renderChallenge() {
   tickCountdown();
 }
 
-function revealScore(score) {
-  el.score.classList.toggle("good", score >= 70);
-  el.score.classList.toggle("bad", score < 35);
+// --- rendering: attempts -------------------------------------------------
 
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduceMotion || score === 0) {
-    el.score.textContent = String(score);
+function scoreClass(score) {
+  if (score >= 70) return "good";
+  if (score < 35) return "bad";
+  return "";
+}
+
+function attemptRow(attempt, isBest) {
+  const li = document.createElement("li");
+  li.className = isBest ? "attempt-row best" : "attempt-row";
+
+  const label = document.createElement("span");
+  label.className = "attempt-label";
+  label.textContent = `Attempt ${attempt.attemptNumber}`;
+
+  const score = document.createElement("span");
+  score.className = `attempt-score ${scoreClass(attempt.score)}`;
+  score.textContent = formatScore(attempt.score);
+
+  li.append(label, score);
+  return li;
+}
+
+/** Render the attempts panel from the current `attempts` array. */
+function renderAttempts() {
+  if (attempts.length === 0) {
+    el.attempts.hidden = true;
     return;
   }
-  const duration = 800;
-  const started = performance.now();
-  const step = (now) => {
-    const t = Math.min(1, (now - started) / duration);
-    el.score.textContent = String(Math.round(score * (1 - (1 - t) ** 3)));
-    if (t < 1) requestAnimationFrame(step);
-    else el.score.textContent = String(score);
-  };
-  requestAnimationFrame(step);
+
+  el.preparing.hidden = true;
+  el.attempts.hidden = false;
+
+  const best = bestAttempt(attempts);
+  el.bestScore.textContent = formatScore(best.score);
+  el.bestScore.className = `score ${scoreClass(best.score)}`;
+  el.bestAnswer.textContent = best.answer;
+
+  el.attemptList.replaceChildren();
+  for (const attempt of attempts) {
+    el.attemptList.append(attemptRow(attempt, attempt === best));
+  }
+
+  const done = attempts.length >= MAX_ATTEMPTS;
+  el.attemptsDone.hidden = !done;
+  el.play.hidden = done;
+  if (!done) el.attemptNumber.textContent = String(attempts.length + 1);
 }
 
-function showResult(result, { animate = true } = {}) {
-  el.preparing.hidden = true;
-  el.play.hidden = true;
-  el.result.hidden = false;
-  el.yourAnswer.textContent = result.answer;
-  if (animate) revealScore(result.score);
-  else el.score.textContent = String(result.score);
-}
+// --- rendering: leaderboard ----------------------------------------------
 
 function rowNode(entry, rank) {
   const li = document.createElement("li");
@@ -132,7 +168,7 @@ function rowNode(entry, rank) {
 
   const score = document.createElement("span");
   score.className = "row-score";
-  score.textContent = String(entry.score);
+  score.textContent = formatScore(entry.score);
 
   li.append(rankEl, main, score);
   return li;
@@ -174,6 +210,21 @@ async function refreshBoard() {
   }
 }
 
+// Live updates: everyone already on the page sees new scores without
+// reloading. 7s sits inside the "5-10s polling is fine" range; paused while
+// the tab is hidden so a backgrounded tab does not poll forever, and an
+// immediate refresh fires the moment the tab becomes visible again.
+let pollTimer = null;
+function startPolling() {
+  if (!leaderboardEnabled() || pollTimer) return;
+  pollTimer = setInterval(() => {
+    if (!document.hidden) refreshBoard();
+  }, 7000);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshBoard();
+});
+
 // --- judge loading ---------------------------------------------------------
 
 function formatBytes(bytes) {
@@ -184,31 +235,46 @@ function formatBytes(bytes) {
 
 async function prepareJudge() {
   const info = await judgeInfo();
-  const size = formatBytes(info.downloadBytes);
+  const totalSize = formatBytes(info.downloadBytes);
 
   if (info.isCached) {
-    el.preparingText.textContent = "Waking up today's judge…";
-    el.preparingNote.textContent = "Already downloaded on this device.";
-  } else if (size) {
-    el.preparingNote.textContent = `One-time ${size} download, then it is cached for next time.`;
+    el.preparingText.textContent = "Loading the judge…";
+    el.preparingNote.textContent = "Already downloaded on this device — no redownload needed.";
+  } else if (totalSize) {
+    el.preparingText.textContent = "Downloading judge…";
+    el.preparingNote.textContent = `One-time ${totalSize} download. It will be cached on this device afterwards.`;
   }
 
-  let lastShown = -1;
   await loadJudge({
-    onProgress: (progress) => {
-      const percent = Math.round(progress * 100);
-      if (percent === lastShown) return;
-      lastShown = percent;
-      el.preparingBar.style.width = `${percent}%`;
-      el.preparingText.textContent = `Preparing today's judge… ${percent}%`;
+    onPhase: ({ phase, progress, loaded, total }) => {
+      if (phase === PHASE.DOWNLOADING) {
+        const percent = Math.round(progress * 100);
+        el.preparingBar.style.width = `${percent}%`;
+        el.preparingBar.classList.remove("indeterminate");
+        const byteNote =
+          typeof loaded === "number" && typeof total === "number" && total > 0
+            ? ` (${formatBytes(loaded) ?? "0 MB"} / ${formatBytes(total) ?? totalSize})`
+            : "";
+        el.preparingText.textContent = `Downloading judge… ${percent}%${byteNote}`;
+      } else if (phase === PHASE.INITIALIZING) {
+        el.preparingBar.style.width = "100%";
+        el.preparingBar.classList.add("indeterminate");
+        el.preparingText.textContent = "Initializing judge…";
+        el.preparingNote.textContent = "Setting up the model on this device. Almost ready.";
+      } else if (phase === PHASE.READY) {
+        el.preparingBar.classList.remove("indeterminate");
+        el.preparingText.textContent = "Judge ready.";
+      }
     },
   });
 
   el.preparingBar.style.width = "100%";
   el.preparing.hidden = true;
-  el.play.hidden = false;
-  el.name.value = savedName();
-  updateCounter();
+  if (attempts.length < MAX_ATTEMPTS) {
+    el.play.hidden = false;
+    el.name.value = savedName();
+    updateCounter();
+  }
 }
 
 // --- interactions ----------------------------------------------------------
@@ -232,6 +298,10 @@ el.play.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (busy) return;
   showError(null);
+
+  if (attempts.length >= MAX_ATTEMPTS) {
+    return showError("All 3 attempts are used for today.");
+  }
 
   let name;
   let answer;
@@ -264,7 +334,7 @@ el.play.addEventListener("submit", async (event) => {
       normalizedAnswer: normalized,
     });
 
-    const result = {
+    const localAttempt = {
       answer,
       score: verdict.score,
       noul: verdict.noul,
@@ -272,8 +342,6 @@ el.play.addEventListener("submit", async (event) => {
     };
 
     rememberName(name);
-    saveResult(challenge.id, result);
-    showResult(result);
 
     if (leaderboardEnabled()) {
       try {
@@ -289,17 +357,56 @@ el.play.addEventListener("submit", async (event) => {
           score: verdict.score,
           model: verdict.model,
         });
+        // The server assigns the true attempt number and is the source of
+        // truth for the full list - use its copy, not a locally-guessed one.
+        if (Array.isArray(response?.attempts)) {
+          attempts = response.attempts;
+          setLocalAttempts(challenge.id, attempts);
+        } else {
+          attempts = addLocalAttempt(challenge.id, localAttempt);
+        }
+        renderAttempts();
         if (response?.leaderboard) renderBoard(response.leaderboard);
         else await refreshBoard();
       } catch (err) {
-        // The score is real and shown; only the shared board failed.
-        addToLocalBoard(challenge.id, { name, answer, score: result.score, at: result.at, you: true });
-        renderLocalBoard();
-        el.boardNote.hidden = false;
-        el.boardNote.textContent = `Your score is saved on this device. ${err.message}`;
+        if (err.status === 409 && err.body?.error === "max_attempts") {
+          // The server disagrees with our local count (e.g. another tab, or a
+          // cleared-then-restored session) - resync from it rather than argue.
+          try {
+            const server = await fetchAttempts(challenge.id);
+            attempts = server.attempts ?? attempts;
+            setLocalAttempts(challenge.id, attempts);
+          } catch {
+            // Keep what we had; the form stays disabled by the count below.
+          }
+          renderAttempts();
+          showError("All 3 attempts are already used for today.");
+        } else {
+          // The score is real and shown locally; only the shared board failed.
+          attempts = addLocalAttempt(challenge.id, localAttempt);
+          renderAttempts();
+          addToLocalBoard(challenge.id, {
+            name,
+            answer,
+            score: localAttempt.score,
+            at: localAttempt.at,
+            you: true,
+          });
+          renderLocalBoard();
+          el.boardNote.hidden = false;
+          el.boardNote.textContent = `Your score is saved on this device. ${err.message}`;
+        }
       }
     } else {
-      addToLocalBoard(challenge.id, { name, answer, score: result.score, at: result.at, you: true });
+      attempts = addLocalAttempt(challenge.id, localAttempt);
+      renderAttempts();
+      addToLocalBoard(challenge.id, {
+        name,
+        answer,
+        score: localAttempt.score,
+        at: localAttempt.at,
+        you: true,
+      });
       renderLocalBoard();
     }
   } catch (err) {
@@ -308,7 +415,10 @@ el.play.addEventListener("submit", async (event) => {
     busy = false;
     el.submit.disabled = false;
     el.submit.classList.remove("busy");
-    el.submit.querySelector(".submit-label").textContent = "Submit";
+    el.submit.querySelector(".submit-label").textContent = `Submit attempt ${Math.min(
+      attempts.length + 1,
+      MAX_ATTEMPTS,
+    )} of ${MAX_ATTEMPTS}`;
   }
 });
 
@@ -318,12 +428,30 @@ renderChallenge();
 
 await loadConfig();
 
-const already = savedResult(challenge.id);
-if (already) {
-  showResult(already, { animate: false });
-  await refreshBoard();
+// Reconcile attempts: prefer the server's copy (authoritative once a backend
+// exists), fall back to the local cache if the network fails or no backend
+// is configured at all.
+if (leaderboardEnabled()) {
+  try {
+    const server = await fetchAttempts(challenge.id);
+    attempts = Array.isArray(server?.attempts) ? server.attempts : [];
+    setLocalAttempts(challenge.id, attempts);
+  } catch {
+    attempts = localAttempts(challenge.id);
+  }
 } else {
-  await refreshBoard();
+  attempts = localAttempts(challenge.id);
+}
+
+renderAttempts();
+await refreshBoard();
+startPolling();
+
+if (attempts.length >= MAX_ATTEMPTS) {
+  // Already done for today: no reason to download a 365MB model just to show
+  // a screen that says so.
+  el.preparing.hidden = true;
+} else {
   try {
     await prepareJudge();
   } catch (err) {

@@ -8,7 +8,8 @@
  * game's score.
  *
  * WebGPU when the browser has it, WebAssembly otherwise. Weights are fetched
- * from Hugging Face once and then live in the browser's cache.
+ * from Hugging Face once and then live in the browser's Cache Storage, so a
+ * second visit does not re-download them (see judgeInfo()'s isCached).
  *
  * This is NOT hosted Jev's model. It is an open reproduction of the shape of
  * System One (kev-0.6b, based on Qwen3-0.6B-Base). No API key, no credits, no
@@ -28,6 +29,21 @@ let loading = null;
 let instance = null;
 let runtime = null;
 
+/**
+ * Four distinct phases a caller can show distinct UI for. "initializing"
+ * exists because Transformers.js's onProgress callback only fires during file
+ * download - once every file has arrived there is still real work (building
+ * the ONNX Runtime session, allocating on the WebGPU/WASM backend) with no
+ * further progress events, and it is not instant. Without a name for that gap
+ * the UI would sit at "100%" looking stuck for a few seconds.
+ */
+export const PHASE = {
+  DOWNLOADING: "downloading",
+  INITIALIZING: "initializing",
+  READY: "ready",
+  JUDGING: "judging",
+};
+
 /** What the loader is about to fetch, without fetching it. */
 export async function judgeInfo() {
   try {
@@ -45,23 +61,46 @@ export async function judgeInfo() {
 }
 
 /**
- * Load the judge once. `onProgress` gets 0..1 while files download.
- * Concurrent callers share one load.
+ * Load the judge once. `onPhase` is called with ({ phase, progress, loaded,
+ * total }) as loading moves through PHASE.DOWNLOADING (progress 0..1, loaded
+ * and total in bytes when known) then PHASE.INITIALIZING (no further
+ * progress, just the phase change) then resolves once ready.
+ *
+ * Concurrent callers share one load and each gets their own phase callbacks.
  */
-export function loadJudge({ onProgress } = {}) {
+export function loadJudge({ onPhase } = {}) {
   if (instance) return Promise.resolve(instance);
-  if (loading) return loading;
+
+  if (loading) {
+    // A second caller joining an in-flight load: it should still see phase
+    // updates, not silence, so give it at least the ready/initializing signal
+    // once the shared promise settles (the initial download progress is
+    // already gone by the time a second caller arrives, which is fine - the
+    // UI only needs this for the very first caller in practice).
+    return loading;
+  }
+
+  let reachedFullDownload = false;
 
   loading = OpenJev.load({
     model: MODEL,
     dtype: DTYPE,
-    onProgress: ({ progress }) => {
-      if (typeof progress === "number" && onProgress) onProgress(progress);
+    onProgress: ({ progress, loaded, total }) => {
+      if (typeof progress !== "number") return;
+      if (progress >= 1 && !reachedFullDownload) {
+        reachedFullDownload = true;
+        onPhase?.({ phase: PHASE.INITIALIZING, progress: 1, loaded, total });
+        return;
+      }
+      if (!reachedFullDownload) {
+        onPhase?.({ phase: PHASE.DOWNLOADING, progress, loaded, total });
+      }
     },
   })
     .then((jev) => {
       instance = jev;
       runtime = jev.runtime;
+      onPhase?.({ phase: PHASE.READY, progress: 1 });
       return jev;
     })
     .catch((err) => {
@@ -69,6 +108,12 @@ export function loadJudge({ onProgress } = {}) {
       loading = null;
       throw err;
     });
+
+  // If the model was already fully cached, Transformers.js may fire no
+  // download progress at all (nothing to fetch) and jump straight to session
+  // init - tell the caller it is at least initializing so the UI never shows
+  // a bare, unexplained blank loading state.
+  onPhase?.({ phase: PHASE.INITIALIZING, progress: 0 });
 
   return loading;
 }
@@ -86,7 +131,8 @@ export function judgeRuntime() {
  * does not read it as a prompt at all - it scores a fixed pair of options
  * ("no", "yes") against it.
  *
- * Returns { noul, score, model, device, ms }.
+ * Returns { noul, score, model, device, ms }. `score` is full precision
+ * (noul * 100); nothing here rounds it.
  */
 export async function scoreAnswer({ answer, statement }) {
   const jev = await loadJudge();
