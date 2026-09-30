@@ -7,6 +7,14 @@
  * a noul question returns p(yes) for a statement, and that probability is the
  * game's score.
  *
+ * Exactly one Noul call per answer, by design: the statement asks a single
+ * question - does this answer make the riddle true under a plausible
+ * interpretation - and a second model call was tested and rejected (it
+ * performed worse; see web/scripts/riddle-bench/). The one deterministic,
+ * non-AI defense that measurement showed necessary (against restating the
+ * riddle's own wording) lives in shared/gibberish.js and runs before this is
+ * ever called, not as a second model evaluation.
+ *
  * WebGPU when the browser has it, WebAssembly otherwise. Weights are fetched
  * from Hugging Face once and then live in the browser's Cache Storage, so a
  * second visit does not re-download them (see judgeInfo()'s isCached).

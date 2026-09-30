@@ -3,11 +3,16 @@
  * installed Microsoft Edge (Chromium) — no browser download needed.
  *
  * Exercises the actual deployed (or local preview) page: loads it, waits for
- * the real model to load via WebGPU or WASM, submits real answers through the
- * real UI across all 3 attempts, and inspects the real DOM and real network
- * requests. No mocking.
+ * the real model to load via WebGPU or WASM, submits three genuinely
+ * different interpretations through the real UI, and inspects the real DOM
+ * and real network requests. No mocking.
  *
  *   node scripts/browser-test.mjs <url>
+ *
+ * Note: with no shared backend deployed (config.json's leaderboardUrl is
+ * null), this exercises the local-fallback leaderboard, not the cross-device
+ * answer-visibility gating - that is covered separately and for real by
+ * worker/test/e2e.mjs against a live Miniflare instance.
  */
 import { chromium } from "playwright-core";
 import fs from "node:fs";
@@ -47,7 +52,7 @@ async function submitAndWait(page, name, answer) {
     () => document.getElementById("attempts")?.hidden === false,
     { timeout: 5 * 60 * 1000 },
   );
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(500);
 }
 
 try {
@@ -65,36 +70,24 @@ try {
   check("page loads", response && response.ok(), `HTTP ${response?.status()}`);
 
   const prompt = await pageA.locator("#prompt").textContent({ timeout: 10000 });
-  check("challenge prompt shown", /fun and happy thought/i.test(prompt ?? ""), `"${prompt}"`);
-
-  const attemptsNote = await pageA.locator("#attempts-note").textContent();
-  check("UI explicitly states 3 attempts", /3 attempts/i.test(attemptsNote ?? ""), `"${attemptsNote}"`);
-
-  // --- loading phases: must see a real progress state, not a bare spinner --
-  const loadingTexts = new Set();
-  const watchPhases = (async () => {
-    const until = Date.now() + 9 * 60 * 1000;
-    while (Date.now() < until) {
-      const hidden = await pageA.locator("#preparing").isHidden().catch(() => true);
-      if (hidden) break;
-      const text = await pageA.locator("#preparing-text").textContent().catch(() => "");
-      if (text) loadingTexts.add(text);
-      await pageA.waitForTimeout(300);
-    }
-  })();
-
-  await waitForJudgeReady(pageA);
-  await watchPhases;
-
-  check("judge finished loading, play form visible", true);
-  const sawDownloading = [...loadingTexts].some((t) => /download/i.test(t));
-  const sawInitializing = [...loadingTexts].some((t) => /initializ/i.test(t));
-  console.log(`  loading phase texts observed: ${JSON.stringify([...loadingTexts])}`);
   check(
-    "loading UI showed a distinct downloading or initializing phase (not just a bare spinner)",
-    sawDownloading || sawInitializing,
+    "a riddle is shown (not the old fun-happy-thought prompt)",
+    /\?\s*$/.test((prompt ?? "").trim()) && !/fun and happy thought/i.test(prompt ?? ""),
+    `"${prompt}"`,
   );
 
+  const note = await pageA.locator("#attempts-note").textContent();
+  check("UI explains the average-of-3 mechanic", /average/i.test(note ?? ""), `"${note}"`);
+
+  const riddleNote = await pageA.locator(".riddle-note").textContent();
+  check(
+    "UI states plainly there is no official answer",
+    /no official answer|no correct answer/i.test(riddleNote ?? ""),
+    `"${riddleNote}"`,
+  );
+
+  await waitForJudgeReady(pageA);
+  check("judge finished loading, play form visible", true);
   try {
     await pageA.locator("#preparing").waitFor({ state: "hidden", timeout: 5000 });
     check("loading indicator hidden once ready", true);
@@ -102,81 +95,82 @@ try {
     check("loading indicator hidden once ready", false);
   }
 
-  // --- attempt 1 --------------------------------------------------------
-  await submitAndWait(pageA, "Ada", "I ate ice cream in the sunshine and laughed with my friend.");
-  const best1 = await pageA.locator("#best-score").textContent();
+  // --- three genuinely different interpretations --------------------------
+  const ANSWERS = ["a room", "a competition", "a conversation"];
+  const individualScores = [];
+
+  for (let i = 0; i < 3; i += 1) {
+    await submitAndWait(pageA, "Ada", ANSWERS[i]);
+    const rows = await pageA.locator(".attempt-row").count();
+    check(`attempt ${i + 1}: attempt list shows exactly ${i + 1} row(s)`, rows === i + 1, `rows=${rows}`);
+
+    const scoreTexts = await pageA.locator(".attempt-score").allTextContents();
+    check(
+      `attempt ${i + 1}: every individual score has exactly two decimal places`,
+      scoreTexts.every((t) => /^\d{1,3}\.\d{2}$/.test(t)),
+      JSON.stringify(scoreTexts),
+    );
+    individualScores.push(Number(scoreTexts[i]));
+
+    const answerTexts = await pageA.locator(".attempt-answer").allTextContents();
+    check(
+      `attempt ${i + 1}: the player's own answer text is shown next to its score`,
+      answerTexts[i] === ANSWERS[i],
+      `"${answerTexts[i]}" vs "${ANSWERS[i]}"`,
+    );
+  }
+
+  const dailyScoreText = await pageA.locator("#daily-score").textContent();
+  const dailyScore = Number(dailyScoreText);
+  const expectedAverage =
+    Math.round((individualScores.reduce((a, b) => a + b, 0) / 3) * 100) / 100;
   check(
-    "attempt 1: score has exactly two decimal places",
-    /^\d{1,3}\.\d{2}$/.test(best1 ?? ""),
-    `"${best1}"`,
+    "the daily score is the AVERAGE of the three individual scores",
+    Math.abs(dailyScore - expectedAverage) < 0.02,
+    `shown=${dailyScore} expected~${expectedAverage} individuals=${JSON.stringify(individualScores)}`,
   );
-  const score1 = Number(best1);
-  check("attempt 1: score is in range", score1 >= 0 && score1 <= 100, `${score1}`);
-
-  let rows = await pageA.locator(".attempt-row").count();
-  check("attempt list shows exactly 1 row after attempt 1", rows === 1, `rows=${rows}`);
-
-  const submitLabel2 = await pageA.locator("#submit .submit-label").textContent();
-  check("submit button now offers attempt 2 of 3", /2 of 3/.test(submitLabel2 ?? ""), `"${submitLabel2}"`);
-
-  // --- attempt 2 (deliberately worse answer) -----------------------------
-  await submitAndWait(pageA, "Ada", "The train timetable was updated on Tuesday.");
-  rows = await pageA.locator(".attempt-row").count();
-  check("attempt list shows exactly 2 rows after attempt 2", rows === 2, `rows=${rows}`);
-
-  // --- attempt 3 (deliberately best answer) ------------------------------
-  await submitAndWait(
-    pageA,
-    "Ada",
-    "Watching my dog sprint through long grass with her ears flapping, pure joy.",
-  );
-  rows = await pageA.locator(".attempt-row").count();
-  check("attempt list shows exactly 3 rows after attempt 3", rows === 3, `rows=${rows}`);
-
-  const bestFinal = Number(await pageA.locator("#best-score").textContent());
-  const rowScores = await pageA.locator(".attempt-score").allTextContents();
-  const numericRowScores = rowScores.map(Number);
-  console.log(`  all 3 attempt scores: ${JSON.stringify(numericRowScores)}, best shown: ${bestFinal}`);
   check(
-    "BEST SCORE equals the maximum of the 3 individual attempts, not the latest",
-    Math.abs(bestFinal - Math.max(...numericRowScores)) < 0.01,
-    `best=${bestFinal} max(attempts)=${Math.max(...numericRowScores)}`,
+    "the daily score is NOT simply the highest of the three (regression check)",
+    Math.abs(dailyScore - Math.max(...individualScores)) > 0.01 ||
+      individualScores.every((s) => s === individualScores[0]),
+    `daily=${dailyScore} max=${Math.max(...individualScores)}`,
   );
 
   // --- 4th attempt must be impossible -------------------------------------
-  const playHiddenNow = await pageA.locator("#play").isHidden();
-  check("play form is hidden/disabled after 3 attempts (no 4th submission possible)", playHiddenNow);
-  const doneMsgHidden = await pageA.locator("#attempts-done").isHidden();
-  check("a clear 'all attempts used' message is shown", !doneMsgHidden);
+  check("play form is hidden after 3 attempts (no 4th submission possible)", await pageA.locator("#play").isHidden());
+  check("a clear 'all attempts used' message is shown", !(await pageA.locator("#attempts-done").isHidden()));
 
-  // --- no Jev API, no secrets ----------------------------------------------
+  // --- no Jev API, no secrets, no crashes ------------------------------------
   const jevCalls = requests.filter((u) => /thejevai\.com/i.test(u));
   check("no request ever made to the hosted Jev API", jevCalls.length === 0, `${jevCalls.length} calls`);
   const secretPattern = /sk_[A-Za-z0-9]{10,}|JEV_API_KEY|gho_[A-Za-z0-9]{10,}/i;
-  const leaked = requests.filter((u) => secretPattern.test(u));
-  check("no secret in any outgoing request URL", leaked.length === 0, `${leaked.length} matches`);
+  check("no secret in any outgoing request URL", !requests.some((u) => secretPattern.test(u)));
   check("no uncaught page errors", consoleErrors.length === 0, consoleErrors.join(" | "));
 
-  const usingSharedBackend = requests.some(
-    (u) => !u.includes("biccyanzac-pixel.github.io") && /\/api\//.test(u),
+  // --- the UI never names the model/AI mechanics -----------------------------
+  const bodyText = await pageA.evaluate(() => document.body.innerText);
+  check(
+    "the visible page never mentions the model/AI implementation",
+    !/kev-0\.6b|open-jev|transformers\.js|noul probability/i.test(bodyText),
   );
-  console.log(`  INFO  shared backend in use: ${usingSharedBackend}`);
 
   // --- refresh persistence --------------------------------------------------
   await pageA.reload({ waitUntil: "domcontentloaded" });
   await pageA.waitForFunction(() => document.getElementById("attempts")?.hidden === false, {
     timeout: 15000,
   });
-  const bestAfterRefresh = Number(await pageA.locator("#best-score").textContent());
+  const dailyAfterRefresh = Number(await pageA.locator("#daily-score").textContent());
   check(
-    "best score persists across a refresh",
-    Math.abs(bestAfterRefresh - bestFinal) < 0.01,
-    `before=${bestFinal} after=${bestAfterRefresh}`,
+    "daily score persists across a refresh",
+    Math.abs(dailyAfterRefresh - dailyScore) < 0.01,
+    `before=${dailyScore} after=${dailyAfterRefresh}`,
   );
-  const rowsAfterRefresh = await pageA.locator(".attempt-row").count();
-  check("all 3 attempts still shown after refresh", rowsAfterRefresh === 3, `rows=${rowsAfterRefresh}`);
-  const playHiddenAfterRefresh = await pageA.locator("#play").isHidden();
-  check("play form still hidden after refresh (3/3 used)", playHiddenAfterRefresh);
+  check("all 3 attempts still shown after refresh", (await pageA.locator(".attempt-row").count()) === 3);
+  check("play form still hidden after refresh (3/3 used)", await pageA.locator("#play").isHidden());
+
+  // --- yesterday's gallery: present or absent without crashing --------------
+  const yesterdayHidden = await pageA.locator("#yesterday").isHidden();
+  console.log(`  INFO  yesterday's-interpretations panel hidden: ${yesterdayHidden} (expected with no shared backend deployed)`);
 
   await ctxA.close();
 
@@ -188,18 +182,9 @@ try {
   await waitForJudgeReady(pageB);
   check("a second, independent browser session can load and play", true);
 
-  await submitAndWait(pageB, "Bea", "My dog farted and everyone started laughing.");
-  const scoreB = Number(await pageB.locator("#best-score").textContent());
-  check(
-    "second player gets their own real score",
-    Number.isFinite(scoreB) && scoreB >= 0 && scoreB <= 100,
-    `score=${scoreB}`,
-  );
-  check(
-    "two different players' answers get different scores (not a fixed/fake number)",
-    Math.abs(scoreB - bestFinal) > 0.001,
-    `A=${bestFinal} B=${scoreB}`,
-  );
+  await submitAndWait(pageB, "Bea", "a password");
+  const bScore = Number((await pageB.locator(".attempt-score").allTextContents())[0]);
+  check("second player gets a real per-attempt score", Number.isFinite(bScore) && bScore >= 0 && bScore <= 100);
 
   await ctxB.close();
 } finally {

@@ -2,21 +2,22 @@ import "./style.css";
 import {
   MAX_ANSWER,
   MAX_ATTEMPTS,
+  averageScore,
   challengeForDay,
   formatScore,
   msUntilNextDay,
+  previousDayKey,
   todayKey,
   validateAnswer,
   validateName,
 } from "@shared/challenges.js";
 import { answerHash, normalizeAnswer } from "@shared/normalize.js";
-import { looksLikeRealText } from "@shared/gibberish.js";
+import { looksLikeOwnInterpretation, looksLikeRealText } from "@shared/gibberish.js";
 import { PHASE, judgeInfo, loadJudge, scoreAnswer } from "./judge.js";
 import { fetchAttempts, fetchLeaderboard, leaderboardEnabled, loadConfig, submit } from "./api.js";
 import {
   addLocalAttempt,
   addToLocalBoard,
-  bestAttempt,
   localAttempts,
   localBoard,
   rememberName,
@@ -29,7 +30,6 @@ const el = {
   daynum: $("daynum"),
   countdown: $("countdown"),
   prompt: $("prompt"),
-  hint: $("hint"),
   attemptsNote: $("attempts-note"),
   preparing: $("preparing"),
   preparingText: $("preparing-text"),
@@ -43,22 +43,26 @@ const el = {
   submit: $("submit"),
   attemptNumber: $("attempt-number"),
   attempts: $("attempts"),
-  bestScore: $("best-score"),
-  bestAnswer: $("best-answer"),
+  dailyScore: $("daily-score"),
+  dailyScoreCaption: $("daily-score-caption"),
   attemptList: $("attempt-list"),
   attemptsDone: $("attempts-done"),
   board: $("board"),
   rows: $("rows"),
   players: $("players"),
   boardEmpty: $("board-empty"),
+  boardLocked: $("board-locked"),
   boardNote: $("board-note"),
+  yesterday: $("yesterday"),
+  yesterdayRows: $("yesterday-rows"),
+  yesterdayEmpty: $("yesterday-empty"),
 };
 
 const challenge = challengeForDay(todayKey());
 
-// The player's attempts at today's challenge, authoritative copy once a
-// backend is configured (reconciled from the server on load and after every
-// submit), otherwise the local-only record.
+// The player's attempts at today's riddle, authoritative copy once a backend
+// is configured (reconciled from the server on load and after every submit),
+// otherwise the local-only record.
 let attempts = [];
 
 // --- small helpers ---------------------------------------------------------
@@ -76,7 +80,7 @@ let resetsAt = Date.now() + msUntilNextDay();
 function tickCountdown() {
   const remaining = resetsAt - Date.now();
   if (remaining <= 0) {
-    el.countdown.textContent = "new challenge ready — refresh";
+    el.countdown.textContent = "new riddle ready — refresh";
     return;
   }
   const total = Math.floor(remaining / 1000);
@@ -86,12 +90,22 @@ function tickCountdown() {
 }
 setInterval(tickCountdown, 1000);
 
+function hasCompletedToday() {
+  return attempts.length >= MAX_ATTEMPTS;
+}
+
+// The single highest-scoring individual attempt's text - shown as the
+// representative answer on the local-only fallback board, matching how the
+// worker picks a representative answer for the shared leaderboard.
+function bestAnswerOf(list) {
+  return list.reduce((best, a) => (a.score > best.score ? a : best), list[0]).answer;
+}
+
 // --- rendering: challenge ----------------------------------------------
 
 function renderChallenge() {
   el.daynum.textContent = `Daily #${challenge.dayNumber}`;
   el.prompt.textContent = challenge.prompt;
-  el.hint.textContent = challenge.hint ?? "";
   el.answer.maxLength = MAX_ANSWER;
   tickCountdown();
 }
@@ -104,23 +118,31 @@ function scoreClass(score) {
   return "";
 }
 
-function attemptRow(attempt, isBest) {
+// Two-line row: "Attempt N — score" then the player's own answer text below
+// it, so they can see whether a reinterpretation actually improved things.
+function attemptRow(attempt) {
   const li = document.createElement("li");
-  li.className = isBest ? "attempt-row best" : "attempt-row";
+  li.className = "attempt-row";
 
+  const head = document.createElement("div");
+  head.className = "attempt-head";
   const label = document.createElement("span");
   label.className = "attempt-label";
   label.textContent = `Attempt ${attempt.attemptNumber}`;
-
   const score = document.createElement("span");
   score.className = `attempt-score ${scoreClass(attempt.score)}`;
   score.textContent = formatScore(attempt.score);
+  head.append(label, score);
 
-  li.append(label, score);
+  const answer = document.createElement("blockquote");
+  answer.className = "attempt-answer";
+  answer.textContent = attempt.answer;
+
+  li.append(head, answer);
   return li;
 }
 
-/** Render the attempts panel from the current `attempts` array. */
+/** Render the attempts panel and the running/final daily average. */
 function renderAttempts() {
   if (attempts.length === 0) {
     el.attempts.hidden = true;
@@ -130,25 +152,31 @@ function renderAttempts() {
   el.preparing.hidden = true;
   el.attempts.hidden = false;
 
-  const best = bestAttempt(attempts);
-  el.bestScore.textContent = formatScore(best.score);
-  el.bestScore.className = `score ${scoreClass(best.score)}`;
-  el.bestAnswer.textContent = best.answer;
+  const daily = averageScore(attempts);
+  el.dailyScore.textContent = formatScore(daily);
+  el.dailyScore.className = `score ${scoreClass(daily)}`;
+  el.dailyScoreCaption.textContent = hasCompletedToday()
+    ? "Daily score — average of all 3 attempts"
+    : `Daily score so far — average of ${attempts.length} of ${MAX_ATTEMPTS}`;
 
   el.attemptList.replaceChildren();
-  for (const attempt of attempts) {
-    el.attemptList.append(attemptRow(attempt, attempt === best));
-  }
+  for (const attempt of attempts) el.attemptList.append(attemptRow(attempt));
 
-  const done = attempts.length >= MAX_ATTEMPTS;
+  const done = hasCompletedToday();
   el.attemptsDone.hidden = !done;
   el.play.hidden = done;
   if (!done) el.attemptNumber.textContent = String(attempts.length + 1);
 }
 
-// --- rendering: leaderboard ----------------------------------------------
+// --- rendering: today's leaderboard ----------------------------------------
+//
+// Answer text for today's board only ever arrives from the server once this
+// player has completed all 3 attempts - see api.js/worker: the worker itself
+// omits `answer` from every row until the requesting player's own attempt
+// count reaches MAX_ATTEMPTS, so there is nothing to redact here client-side
+// and no answer text to accidentally render even by mistake.
 
-function rowNode(entry, rank) {
+function todayRowNode(entry, rank) {
   const li = document.createElement("li");
   li.className = entry.you ? "row me" : "row";
 
@@ -161,10 +189,13 @@ function rowNode(entry, rank) {
   const name = document.createElement("div");
   name.className = "row-name";
   name.textContent = entry.you ? `${entry.name} (you)` : entry.name;
-  const answer = document.createElement("div");
-  answer.className = "row-answer";
-  answer.textContent = entry.answer ?? "";
-  main.append(name, answer);
+  main.append(name);
+  if (entry.answer) {
+    const answer = document.createElement("div");
+    answer.className = "row-answer";
+    answer.textContent = entry.answer;
+    main.append(answer);
+  }
 
   const score = document.createElement("span");
   score.className = "row-score";
@@ -181,12 +212,13 @@ function renderBoard(board, note) {
   const players = board?.players ?? rows.length;
   el.players.textContent = players === 1 ? "1 player" : `${players} players`;
   el.boardEmpty.hidden = rows.length > 0;
-  rows.forEach((entry, index) => el.rows.append(rowNode(entry, index + 1)));
+  el.boardLocked.hidden = hasCompletedToday() || !leaderboardEnabled();
+  rows.forEach((entry, index) => el.rows.append(todayRowNode(entry, index + 1)));
   if (board?.you) {
     const gap = document.createElement("li");
     gap.className = "row-gap";
     gap.textContent = "···";
-    el.rows.append(gap, rowNode(board.you, board.you.rank));
+    el.rows.append(gap, todayRowNode(board.you, board.you.rank));
   }
   el.boardNote.textContent = note ?? "";
   el.boardNote.hidden = !note;
@@ -212,8 +244,7 @@ async function refreshBoard() {
 
 // Live updates: everyone already on the page sees new scores without
 // reloading. 7s sits inside the "5-10s polling is fine" range; paused while
-// the tab is hidden so a backgrounded tab does not poll forever, and an
-// immediate refresh fires the moment the tab becomes visible again.
+// the tab is hidden, with an immediate refresh when it becomes visible again.
 let pollTimer = null;
 function startPolling() {
   if (!leaderboardEnabled() || pollTimer) return;
@@ -224,6 +255,43 @@ function startPolling() {
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) refreshBoard();
 });
+
+// --- rendering: yesterday's strongest interpretations -----------------------
+//
+// Reuses the same leaderboard endpoint against yesterday's challenge id - no
+// new route. Past-day answers are never redacted (see worker), so this always
+// shows real text once there is a previous day to show. Deliberately no
+// names and no rank numbers here: this is "discovery", not a leaderboard.
+
+async function renderYesterday() {
+  if (!leaderboardEnabled()) {
+    el.yesterday.hidden = true;
+    return;
+  }
+  const yesterdayId = challengeForDay(previousDayKey(challenge.dayKey)).id;
+  try {
+    const board = await fetchLeaderboard(yesterdayId);
+    const rows = board?.top ?? [];
+    el.yesterday.hidden = false;
+    el.yesterdayRows.replaceChildren();
+    el.yesterdayEmpty.hidden = rows.length > 0;
+    for (const entry of rows) {
+      if (!entry.answer) continue; // defensive: never render a missing answer
+      const li = document.createElement("li");
+      li.className = "yesterday-row";
+      const score = document.createElement("span");
+      score.className = "yesterday-score";
+      score.textContent = formatScore(entry.score);
+      const answer = document.createElement("span");
+      answer.className = "yesterday-answer";
+      answer.textContent = entry.answer;
+      li.append(score, answer);
+      el.yesterdayRows.append(li);
+    }
+  } catch {
+    el.yesterday.hidden = true;
+  }
+}
 
 // --- judge loading ---------------------------------------------------------
 
@@ -282,7 +350,7 @@ async function prepareJudge() {
 function updateCounter() {
   const used = [...el.answer.value].length;
   el.counter.textContent = `${used} / ${MAX_ANSWER}`;
-  el.counter.classList.toggle("near", used > MAX_ANSWER - 40);
+  el.counter.classList.toggle("near", used > MAX_ANSWER - 15);
 }
 el.answer.addEventListener("input", updateCounter);
 el.answer.addEventListener("keydown", (event) => {
@@ -299,7 +367,7 @@ el.play.addEventListener("submit", async (event) => {
   if (busy) return;
   showError(null);
 
-  if (attempts.length >= MAX_ATTEMPTS) {
+  if (hasCompletedToday()) {
     return showError("All 3 attempts are used for today.");
   }
 
@@ -312,17 +380,19 @@ el.play.addEventListener("submit", async (event) => {
     return showError(err.message);
   }
 
-  // A non-AI gate against pure keymash ("asdfghjkl"). It never scores
-  // anything - it only decides whether the real judge is asked at all.
-  // See shared/gibberish.js for why this exists.
+  // Two non-AI gates, neither of which ever scores anything - they only
+  // decide whether the real judge is asked at all. See shared/gibberish.js.
   if (!looksLikeRealText(answer)) {
-    return showError("Write an actual thought, not random characters.");
+    return showError("Write an actual interpretation, not random characters.");
+  }
+  if (!looksLikeOwnInterpretation(answer, challenge.prompt)) {
+    return showError("That just repeats the riddle back — give your own interpretation.");
   }
 
   busy = true;
   el.submit.disabled = true;
   el.submit.classList.add("busy");
-  el.submit.querySelector(".submit-label").textContent = "Scoring…";
+  el.submit.querySelector(".submit-label").textContent = "Judging…";
 
   try {
     const verdict = await scoreAnswer({ answer, statement: challenge.noulStatement });
@@ -370,8 +440,6 @@ el.play.addEventListener("submit", async (event) => {
         else await refreshBoard();
       } catch (err) {
         if (err.status === 409 && err.body?.error === "max_attempts") {
-          // The server disagrees with our local count (e.g. another tab, or a
-          // cleared-then-restored session) - resync from it rather than argue.
           try {
             const server = await fetchAttempts(challenge.id);
             attempts = server.attempts ?? attempts;
@@ -387,8 +455,8 @@ el.play.addEventListener("submit", async (event) => {
           renderAttempts();
           addToLocalBoard(challenge.id, {
             name,
-            answer,
-            score: localAttempt.score,
+            answer: bestAnswerOf(attempts),
+            score: averageScore(attempts),
             at: localAttempt.at,
             you: true,
           });
@@ -402,8 +470,8 @@ el.play.addEventListener("submit", async (event) => {
       renderAttempts();
       addToLocalBoard(challenge.id, {
         name,
-        answer,
-        score: localAttempt.score,
+        answer: bestAnswerOf(attempts),
+        score: averageScore(attempts),
         at: localAttempt.at,
         you: true,
       });
@@ -445,9 +513,10 @@ if (leaderboardEnabled()) {
 
 renderAttempts();
 await refreshBoard();
+await renderYesterday(); // a different, already-closed riddle - safe to show any time
 startPolling();
 
-if (attempts.length >= MAX_ATTEMPTS) {
+if (hasCompletedToday()) {
   // Already done for today: no reason to download a 365MB model just to show
   // a screen that says so.
   el.preparing.hidden = true;

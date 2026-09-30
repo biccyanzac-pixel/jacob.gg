@@ -1,66 +1,79 @@
 /**
- * Challenge definitions, isomorphic: the browser, the leaderboard worker and
- * the local Express server all read the same data, so nobody can disagree
- * about which challenge is today's.
+ * Challenge definitions, isomorphic: the browser and the leaderboard worker
+ * read the same data, so nobody can disagree about which challenge is
+ * today's, what it asks, or how a score is derived from it.
  *
- * The client never *chooses* a challenge. It derives today's from the UTC date
- * exactly as the server does, and the server recomputes it and rejects any
- * submission whose challenge id does not match.
+ * The client never *chooses* a challenge. It derives today's from the UTC
+ * date exactly as the worker does, and the worker recomputes it and rejects
+ * any submission whose challenge id does not match.
+ *
+ * GAME CONCEPT (v4): an open-ended daily riddle with deliberately no
+ * predetermined answer. The player proposes a short interpretation; the judge
+ * asks one question - does this answer make the riddle true under a
+ * plausible reading of its wording - and the leaderboard discovers strong
+ * interpretations after the fact. There is intentionally no `answer` or
+ * `correctAnswer` field anywhere in this file: the riddle itself is the only
+ * thing being judged, never a hidden key. See web/scripts/riddle-bench/ for
+ * the benchmark and measurements behind the judge statement below.
  */
 
-export const SCORING_VERSION = 3;
-// Bumped from 2: scores are now full-precision (noul * 100, displayed to two
-// decimal places instead of rounded to an integer) and each player gets up to
-// three attempts per challenge instead of one. Both are scoring-semantics
-// changes, so v2 evaluations are never compared against v3 ones.
+export const SCORING_VERSION = 4;
+// v1: hosted Jev. v2: in-browser open-weights noul model. v3: full-precision
+// two-decimal scores, three attempts, highest-of-three. v4: the game becomes
+// an open-ended riddle (judge target changes from sentiment to "does this
+// interpretation make the riddle true"), and the daily score becomes the
+// AVERAGE of all three attempts rather than the highest - both are scoring-
+// semantics changes, so no evaluation ever carries across a version bump.
 export const MAX_ATTEMPTS = 3;
+
+/**
+ * The single Noul statement template every riddle uses. Chosen empirically:
+ * web/scripts/riddle-bench/sweep.mjs measured 10 candidate phrasings (plus a
+ * two-Noul combination that performed worse) against a 5-riddle, 60-answer
+ * benchmark on the shipped kev-0.6b model. This one had the best rank
+ * correlation between hand-assigned answer quality and model score of
+ * everything tested (still modest - see the benchmark's README for the
+ * honest numbers) and never let a nonsense/unrelated answer reach 95+ in
+ * testing. A per-riddle hand-authored answer key is deliberately not part of
+ * this template - the riddle's own wording is the only judging context.
+ */
+export function riddleStatement(prompt) {
+  return `Is the answer a plausible interpretation of the riddle "${prompt}" that resolves its apparent contradiction?`;
+}
 
 export const CHALLENGES = [
   {
-    slug: "fun-happy-thought",
-    // v1: hosted Jev. v2: moved to the in-browser open-weights noul model.
-    // v3: full-precision two-decimal scores and three attempts per day.
-    // Evaluations never carry across a version bump.
+    slug: "enter-without-going-in",
     scoringVersion: SCORING_VERSION,
-
-    // Player-facing.
-    prompt: "Type a fun and happy thought.",
-    hint: "Something specific beats something general.",
-
-    // The proposition the noul is the probability of.
-    //
-    // open-jev's noul() takes a single statement and has no criteria object,
-    // unlike the hosted System One API. The wording below carries the same
-    // true/false boundary the criteria expressed, folded into one statement -
-    // the formatting adaptation the browser judge requires. The original
-    // criteria are kept verbatim below and stored with every evaluation, so
-    // what a score was judged against is still recorded.
-    // Chosen by measurement, not guesswork: web/scripts/sweep-statements.mjs
-    // ran five candidate phrasings through both open-jev models on the
-    // required answer set. This one gave the best separation on kev-0.6b
-    // (happy answers 84-99, genuinely unhappy answers 3-7) while keeping the
-    // true/false boundary from the original criteria below.
-    noulStatement:
-      "This is a real, meaningful sentence in English describing something fun and happy.",
-
-    scoringQuestion: "Is this text actually a fun and happy thought?",
-    criteria: {
-      true:
-        "The submitted text genuinely expresses something that could reasonably be " +
-        "described as fun and happy.",
-      false:
-        "The submitted text does not express a fun and happy thought, is predominantly " +
-        "negative or unhappy, is nonsense, or does not meaningfully answer the challenge.",
-    },
+    prompt: "What can you enter without going in?",
+  },
+  {
+    slug: "behind-before-passed",
+    scoringVersion: SCORING_VERSION,
+    prompt: "What can be behind you before you've passed it?",
+  },
+  {
+    slug: "more-true-when-stop-believing",
+    scoringVersion: SCORING_VERSION,
+    prompt: "What can become more true when you stop believing it?",
   },
 ];
 
 export const MAX_NAME = 20;
-export const MAX_ANSWER = 280;
+// Short free-text answers only: the answer IS the interpretation, not an
+// essay defending it ("a competition", not "a competition, because..."). 80
+// characters is roomy for a few words and tight enough to discourage prose.
+export const MAX_ANSWER = 80;
 
 /** UTC calendar day, e.g. "2026-09-30". Everyone gets the same challenge. */
 export function todayKey(now = new Date()) {
   return new Date(now).toISOString().slice(0, 10);
+}
+
+/** The UTC day before a given day key - used for the "yesterday" gallery. */
+export function previousDayKey(dayKey) {
+  const ms = Date.parse(`${dayKey}T00:00:00Z`) - 86_400_000;
+  return new Date(ms).toISOString().slice(0, 10);
 }
 
 /** Millis until the next UTC midnight, for the countdown. */
@@ -82,7 +95,7 @@ export function challengeId(slug, scoringVersion, dayKey) {
   return `${slug}@v${scoringVersion}:${dayKey}`;
 }
 
-/** Today's challenge, fully resolved. Derived, never chosen. */
+/** A challenge fully resolved for a given UTC day. Derived, never chosen. */
 export function challengeForDay(dayKey = todayKey()) {
   const { definition, dayNumber } = definitionForDay(dayKey);
   return {
@@ -90,19 +103,32 @@ export function challengeForDay(dayKey = todayKey()) {
     dayKey,
     dayNumber,
     id: challengeId(definition.slug, definition.scoringVersion, dayKey),
+    noulStatement: riddleStatement(definition.prompt),
   };
 }
 
 /**
  * The game's score is the noul as a percentage, at full precision. Nothing
  * else derives it, and nothing rounds it here - rounding happens only at
- * display time (formatScore), never before storage or comparison, so the
- * leaderboard always sorts and ties on the real value.
+ * display time (formatScore), never before storage or comparison.
  *
  *   0 -> 0, 0.4218 -> 42.18, 0.873742 -> 87.3742, 1 -> 100
  */
 export function scoreFromNoul(noul) {
   return assertNoul(noul) * 100;
+}
+
+/**
+ * The daily score: the arithmetic mean of every attempt submitted so far (up
+ * to MAX_ATTEMPTS), full precision. This is deliberately the average, not the
+ * highest - all three attempts count, so a player cannot ignore a weak first
+ * guess. Returns null for zero attempts.
+ *
+ *   [72.41, 91.83, 84.26] -> 82.833...
+ */
+export function averageScore(attempts) {
+  if (!attempts || attempts.length === 0) return null;
+  return attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length;
 }
 
 /**

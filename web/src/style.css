@@ -455,7 +455,15 @@ textarea:focus-visible,
   display: none !important;
 }
 
-/* --- attempts (3-per-day) ------------------------------------------------ */
+/* --- riddle framing ------------------------------------------------------- */
+
+.riddle-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+/* --- attempts (3-per-day, scored as an average) --------------------------- */
 
 .attempts-note {
   margin: 0.4rem 0 0;
@@ -468,42 +476,36 @@ textarea:focus-visible,
   margin-top: 1.5rem;
 }
 
+#daily-score-caption {
+  margin-top: 0;
+}
+
 .attempt-list {
   list-style: none;
-  margin: 1.1rem 0 0;
+  margin: 1.3rem 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .attempt-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.55rem 0.8rem;
+  padding: 0.6rem 0.8rem;
   border-radius: 10px;
   background: var(--surface-2);
   border: 1px solid var(--border);
 }
 
-.attempt-row.best {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+.attempt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .attempt-label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
-}
-
-.attempt-row.best .attempt-label {
-  color: var(--accent);
-}
-
-.attempt-row.best .attempt-label::after {
-  content: " — best";
 }
 
 .attempt-score {
@@ -520,6 +522,14 @@ textarea:focus-visible,
   color: var(--bad);
 }
 
+.attempt-answer {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  border: 0;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
 .attempts-done {
   margin: 1.1rem 0 0;
   padding: 0.7rem 0.9rem;
@@ -528,6 +538,55 @@ textarea:focus-visible,
   background: var(--surface-2);
   border-radius: 10px;
   text-align: center;
+}
+
+/* --- leaderboard privacy notice -------------------------------------------- */
+
+.board-locked {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+/* --- yesterday's strongest interpretations --------------------------------- */
+
+.yesterday-rows {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.yesterday-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.yesterday-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--accent);
+  flex: none;
+  min-width: 3.5em;
+}
+
+.yesterday-answer {
+  overflow-wrap: anywhere;
+}
+
+.yesterday-empty {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 /* --- indeterminate progress (model initializing, no byte progress) ------- */

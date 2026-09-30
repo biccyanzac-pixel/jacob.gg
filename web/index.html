@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Daily — jacob.gg</title>
-    <meta name="description" content="One question a day. Answer it and see where you land." />
+    <meta
+      name="description"
+      content="A tiny daily riddle with no official answer. Find an interpretation that makes it true."
+    />
     <meta name="color-scheme" content="dark light" />
     <link
       rel="icon"
@@ -25,10 +28,14 @@
           <span class="eyebrow countdown" id="countdown"></span>
         </div>
 
-        <p class="eyebrow challenge-label">Today's challenge</p>
+        <p class="eyebrow challenge-label">Today's riddle</p>
         <h1 class="prompt" id="prompt">Loading…</h1>
-        <p class="hint" id="hint"></p>
-        <p class="attempts-note" id="attempts-note">3 attempts — highest score counts</p>
+        <p class="riddle-note">
+          There's no official answer — find an interpretation that makes it true.
+        </p>
+        <p class="attempts-note" id="attempts-note">
+          3 attempts — your daily score is the average of all three
+        </p>
 
         <!-- Judge loading: distinct phases, never an unexplained spinner -->
         <div class="preparing" id="preparing">
@@ -59,9 +66,15 @@
           </label>
 
           <label class="field">
-            <span class="label">Your answer</span>
-            <textarea id="answer" maxlength="280" rows="3" placeholder="Type it here…" required></textarea>
-            <span class="counter" id="counter">0 / 280</span>
+            <span class="label">Your interpretation</span>
+            <textarea
+              id="answer"
+              maxlength="80"
+              rows="2"
+              placeholder="e.g. a competition"
+              required
+            ></textarea>
+            <span class="counter" id="counter">0 / 80</span>
           </label>
 
           <p class="error" id="error" role="alert" hidden></p>
@@ -70,20 +83,18 @@
             <span class="submit-label">Submit attempt <span id="attempt-number">1</span> of 3</span>
             <span class="spinner" aria-hidden="true"></span>
           </button>
-          <p class="fineprint">Up to 3 attempts. Your best score counts.</p>
+          <p class="fineprint">3 attempts. Your daily score is the average of all three.</p>
         </form>
 
-        <!-- Attempts so far + best score. Shown once at least one attempt exists. -->
+        <!-- Attempts so far + daily average. Shown once at least one attempt exists. -->
         <div class="attempts" id="attempts" hidden>
-          <p class="eyebrow">Best score</p>
-          <p class="score" id="best-score">0.00</p>
-          <p class="eyebrow answer-label">Best answer</p>
-          <blockquote class="your-answer" id="best-answer"></blockquote>
+          <p class="eyebrow" id="daily-score-caption">Daily score</p>
+          <p class="score" id="daily-score">0.00</p>
 
           <ol class="attempt-list" id="attempt-list"></ol>
 
           <p class="attempts-done" id="attempts-done" hidden>
-            All 3 attempts used today. Come back tomorrow for a new challenge.
+            All 3 attempts used today. Come back tomorrow for a new riddle.
           </p>
         </div>
       </section>
@@ -93,13 +104,22 @@
           <h2 class="eyebrow">Today's leaderboard</h2>
           <span class="eyebrow" id="players"></span>
         </div>
+        <p class="board-locked" id="board-locked">
+          Other players' interpretations stay hidden until you've used all 3 of your own attempts.
+        </p>
         <ol class="rows" id="rows"></ol>
         <p class="board-empty" id="board-empty" hidden>Nobody has played yet today. Be the first.</p>
         <p class="board-note" id="board-note" hidden></p>
       </section>
 
+      <section class="card yesterday" id="yesterday" hidden>
+        <h2 class="eyebrow">Some of yesterday's strongest interpretations</h2>
+        <ol class="yesterday-rows" id="yesterday-rows"></ol>
+        <p class="yesterday-empty" id="yesterday-empty" hidden>Nobody played yesterday's riddle.</p>
+      </section>
+
       <footer class="footer">
-        <p>New challenge every day at midnight UTC. Ties broken by earliest submission.</p>
+        <p>New riddle every day at midnight UTC. Ties broken by earliest submission.</p>
       </footer>
     </main>
 

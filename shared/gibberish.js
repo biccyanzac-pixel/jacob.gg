@@ -62,3 +62,58 @@ export function looksLikeRealText(text) {
   // in and "asdfghjkl" out.
   return good / tokens.length >= 0.6;
 }
+
+/**
+ * A second, unrelated non-AI gate: against restating the riddle's own
+ * wording back as if that were an interpretation ("What can you enter
+ * without going in?" -> "You enter without going in by entering it").
+ *
+ * This exists because the riddle judge's single Noul question could not
+ * reliably tell a genuine interpretation from a restatement of the riddle
+ * itself, on any of 10 candidate phrasings tested (see
+ * web/scripts/riddle-bench/sweep.mjs) - restatements scored 85-99 in every
+ * one of 5 benchmark riddles, regardless of wording. That is a measured
+ * capability limit, not a wording problem, so it is closed deterministically
+ * here instead of by adding a second model call.
+ *
+ * Generic stopwords only - nothing riddle-specific - so this works for any
+ * future riddle without per-challenge tuning. Measured against the same
+ * benchmark: catches 4 of 5 restatement cases with zero false positives
+ * across 26 genuine-answer test cases (threshold chosen by that measurement,
+ * not guessed).
+ */
+const STOPWORDS = new Set(
+  "a an the you can be what it is are without going in be has have i he she they we my your its this that".split(
+    " ",
+  ),
+);
+
+// Strips a trailing "e" before -ing/-ed so "leaving"/"leave" and
+// "believing"/"believe" share a stem; also strips plain -ing/-ed/-ly/-s.
+function stem(word) {
+  return word.replace(/e(ing|ed)$/, "$1").replace(/(ing|ed|ly|s)$/, "");
+}
+
+function contentTokens(text) {
+  return (String(text ?? "").toLowerCase().match(/[a-z']+/g) ?? [])
+    .filter((t) => !STOPWORDS.has(t) && t.length > 1)
+    .map(stem);
+}
+
+/**
+ * True if `answer` is NOT just the riddle's own wording repeated back: at
+ * least 60% of the answer's content words must be words the riddle itself
+ * does not use. Never used to score - only to gate whether the judge is
+ * asked at all, exactly like looksLikeRealText above.
+ */
+export function looksLikeOwnInterpretation(answer, riddlePrompt) {
+  const answerTokens = contentTokens(answer);
+  if (answerTokens.length === 0) return false;
+  const riddleTokens = new Set(contentTokens(riddlePrompt));
+
+  let overlapping = 0;
+  for (const token of answerTokens) {
+    if (riddleTokens.has(token)) overlapping += 1;
+  }
+  return overlapping / answerTokens.length < 0.4;
+}

@@ -1,11 +1,12 @@
 /**
- * Shared leaderboard API for the daily game. Cloudflare Worker + D1.
+ * Shared leaderboard API for the daily riddle game. Cloudflare Worker + D1.
  *
  * Scoring happens entirely in the player's browser (open-jev/kev-0.6b) - this
  * worker never runs a model and holds no AI API key. Its job is narrower: be
  * the one thing every player's browser agrees on, so attempts and the
  * leaderboard are real shared state instead of per-device localStorage, and
- * "3 attempts" is a database fact instead of a client promise.
+ * "3 attempts, scored as their average" is a database fact instead of a
+ * client promise.
  *
  * Because inference is client-side, a sophisticated player COULD alter their
  * own score before it reaches here. This worker does not try to re-run the
@@ -31,6 +32,11 @@
  *     token whose hash matches the stored one for that player_id.
  *   - submissions are INSERT-only. Nothing here ever UPDATEs or DELETEs a
  *     row, so a past attempt cannot be altered after the fact.
+ *   - other players' answer text for TODAY's riddle is withheld from a
+ *     player's own leaderboard read until that player's own attempt count
+ *     for today reaches MAX_ATTEMPTS - enforced here, in the response the
+ *     server sends, not left to the client to politely not display it. A
+ *     past day's board is never redacted (see fetchBoard).
  *
  * What this does NOT defend against, honestly: a browser that runs a real
  * model but lies about the resulting noul. There is no server-side model run
@@ -39,16 +45,28 @@
  * trade-off for a free, local-inference game - see README.md.
  */
 
-const SCORING_VERSION = 3;
-const CHALLENGE_SLUG = "fun-happy-thought";
+const SCORING_VERSION = 4;
 const MAX_NAME = 20;
-const MAX_ANSWER = 280;
+// Short free-text interpretations only, matching shared/challenges.js.
+const MAX_ANSWER = 80;
 const MAX_ATTEMPTS = 3;
 const BOARD_SIZE = 10;
 // Float equality guard for score === noul * 100: generous enough for normal
 // floating-point roundoff, tight enough that a meaningfully different number
 // still fails.
 const SCORE_EPSILON = 0.01;
+
+// The daily riddle rotation. Must stay byte-identical in order and slug to
+// shared/challenges.js's CHALLENGES - the worker recomputes today's challenge
+// id from its own clock independently of the client, and the two would
+// silently disagree about which riddle is "today's" if these ever drifted
+// apart. (No prompt text is needed here: the worker never judges anything,
+// it only needs the id to match.)
+const CHALLENGE_SLUGS = [
+  "enter-without-going-in",
+  "behind-before-passed",
+  "more-true-when-stop-believing",
+];
 
 // --- shared logic, ported from shared/normalize.js and shared/challenges.js
 // so the worker can recompute independently of whatever the client sent. ---
@@ -97,8 +115,17 @@ function todayKey(now = new Date()) {
   return now.toISOString().slice(0, 10);
 }
 
-function challengeId(dayKey) {
-  return `${CHALLENGE_SLUG}@v${SCORING_VERSION}:${dayKey}`;
+/** Mirrors shared/challenges.js's definitionForDay: same modulo arithmetic
+ * over the same-order slug list, so both sides always pick the same riddle
+ * for the same UTC day. */
+function slugForDay(dayKey) {
+  const dayNumber = Math.floor(Date.parse(`${dayKey}T00:00:00Z`) / 86_400_000);
+  const index = ((dayNumber % CHALLENGE_SLUGS.length) + CHALLENGE_SLUGS.length) % CHALLENGE_SLUGS.length;
+  return CHALLENGE_SLUGS[index];
+}
+
+function challengeIdForDay(dayKey) {
+  return `${slugForDay(dayKey)}@v${SCORING_VERSION}:${dayKey}`;
 }
 
 function validateName(raw) {
@@ -201,6 +228,16 @@ function attemptView(row) {
   };
 }
 
+async function countAttempts(env, challId, playerId) {
+  if (!playerId) return 0;
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS count FROM submissions WHERE player_id = ? AND challenge_id = ?`,
+  )
+    .bind(playerId, challId)
+    .first();
+  return row?.count ?? 0;
+}
+
 async function fetchPlayerAttempts(env, challId, playerId) {
   const { results } = await env.DB.prepare(
     `SELECT attempt_number, original_answer, score, submitted_at
@@ -213,50 +250,73 @@ async function fetchPlayerAttempts(env, challId, playerId) {
   return (results ?? []).map(attemptView);
 }
 
-function boardRow(row, rank, playerId) {
+function boardRow(row, rank, playerId, redact) {
   return {
     rank,
     name: row.display_name,
-    answer: row.original_answer,
-    score: row.score,
+    // Withheld entirely (not just hidden client-side) for today's board
+    // until the requesting player has used all 3 of their own attempts -
+    // see fetchBoard. A past day's board is never redacted.
+    answer: redact ? null : row.best_answer,
+    score: row.avg_score,
     you: playerId != null && row.player_id === playerId,
   };
 }
 
 /**
- * The leaderboard: one row per player, their single best attempt.
+ * The leaderboard: one row per player, ranked by the arithmetic mean of every
+ * attempt they have submitted so far for this challenge (the "daily score" -
+ * shared/challenges.js's averageScore, recomputed here independently). Each
+ * row also carries that player's single best-scoring individual answer, as
+ * the representative interpretation shown alongside their average.
  *
  * Tie-break rule (documented here because it matters and is easy to get
- * silently inconsistent): ties sort by the *earliest* submission time of the
- * player's best-scoring attempt, then by that submission's id as a final,
- * fully deterministic tiebreak. Both are stable across repeated reads - the
- * same two tied players always come out in the same order.
+ * silently inconsistent): ties on average score sort by the player's
+ * *earliest* submission for this challenge, then by that submission's row id
+ * as a final, fully deterministic tiebreak. Both are stable across repeated
+ * reads - the same two tied players always come out in the same order.
+ *
+ * Answer-text redaction: for TODAY's challenge id, every row's answer is
+ * withheld unless the requesting player (`playerId`) has themselves used all
+ * MAX_ATTEMPTS attempts on today's riddle - so nobody can read a stronger
+ * interpretation than their own before their own three attempts are spent.
+ * A challenge id that is not today's (i.e. already closed) is never
+ * redacted: the whole point of "yesterday's strongest interpretations" is
+ * that those answers are visible normally.
  */
 async function fetchBoard(env, challId, playerId) {
   const { results } = await env.DB.prepare(
-    `WITH best AS (
-       SELECT player_id, display_name, original_answer, score, submitted_at, id,
-              ROW_NUMBER() OVER (
-                PARTITION BY player_id
-                ORDER BY score DESC, submitted_at ASC, id ASC
-              ) AS rn
-         FROM submissions
-        WHERE challenge_id = ?
-     )
-     SELECT player_id, display_name, original_answer, score, submitted_at, id
-       FROM best
-      WHERE rn = 1
-      ORDER BY score DESC, submitted_at ASC, id ASC`,
+    `SELECT player_id, display_name, original_answer AS best_answer, submitted_at, id,
+            AVG(score) OVER (PARTITION BY player_id) AS avg_score,
+            MIN(submitted_at) OVER (PARTITION BY player_id) AS first_submitted_at,
+            ROW_NUMBER() OVER (
+              PARTITION BY player_id
+              ORDER BY score DESC, submitted_at ASC, id ASC
+            ) AS rn
+       FROM submissions
+      WHERE challenge_id = ?`,
   )
     .bind(challId)
     .all();
 
-  const rows = results ?? [];
-  const top = rows.slice(0, BOARD_SIZE).map((r, i) => boardRow(r, i + 1, playerId));
-  const yourIndex = playerId ? rows.findIndex((r) => r.player_id === playerId) : -1;
-  const you = yourIndex >= BOARD_SIZE ? boardRow(rows[yourIndex], yourIndex + 1, playerId) : null;
+  const perPlayer = (results ?? []).filter((r) => r.rn === 1);
+  perPlayer.sort(
+    (a, b) =>
+      b.avg_score - a.avg_score ||
+      a.first_submitted_at.localeCompare(b.first_submitted_at) ||
+      String(a.id).localeCompare(String(b.id)),
+  );
 
-  return { players: rows.length, top, you };
+  const isToday = challId === challengeIdForDay(todayKey());
+  const viewerAttempts = isToday ? await countAttempts(env, challId, playerId) : MAX_ATTEMPTS;
+  const redact = isToday && viewerAttempts < MAX_ATTEMPTS;
+
+  const top = perPlayer.slice(0, BOARD_SIZE).map((r, i) => boardRow(r, i + 1, playerId, redact));
+  const yourIndex = playerId ? perPlayer.findIndex((r) => r.player_id === playerId) : -1;
+  const you =
+    yourIndex >= BOARD_SIZE ? boardRow(perPlayer[yourIndex], yourIndex + 1, playerId, redact) : null;
+
+  return { players: perPlayer.length, top, you };
 }
 
 async function handleLeaderboard(request, env) {
@@ -269,7 +329,9 @@ async function handleLeaderboard(request, env) {
 
 /** This player's own attempts at a challenge - lets a fresh page load (or a
  * cleared localStorage, as long as the session token survives) restore state
- * from the server rather than only trusting the browser. */
+ * from the server rather than only trusting the browser. Always includes
+ * this player's own answer text regardless of the redaction rule above,
+ * which only ever applies to *other* players on the leaderboard. */
 async function handleAttempts(request, env) {
   const url = new URL(request.url);
   const challId = url.searchParams.get("challengeId");
@@ -300,11 +362,11 @@ async function handlePlay(request, env, ip) {
   // The challenge id is never trusted from the client - it is recomputed from
   // the server's own clock and the request is rejected if they disagree.
   const day = todayKey();
-  const expectedChallengeId = challengeId(day);
+  const expectedChallengeId = challengeIdForDay(day);
   if (body.challengeId !== expectedChallengeId) {
     return fail(
       "stale_challenge",
-      "That challenge has ended. Refresh the page for today's.",
+      "That riddle has ended. Refresh the page for today's.",
       409,
       env,
     );
@@ -352,11 +414,7 @@ async function handlePlay(request, env, ip) {
   let inserted = false;
   let attemptNumber = null;
   for (let tries = 0; tries < 3 && !inserted; tries += 1) {
-    const { count } = await env.DB.prepare(
-      `SELECT COUNT(*) AS count FROM submissions WHERE player_id = ? AND challenge_id = ?`,
-    )
-      .bind(playerId, expectedChallengeId)
-      .first();
+    const count = await countAttempts(env, expectedChallengeId, playerId);
 
     if (count >= MAX_ATTEMPTS) {
       return fail(

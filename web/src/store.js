@@ -71,11 +71,6 @@ export function setLocalAttempts(challengeId, attempts) {
   write(ATTEMPTS_PREFIX + challengeId, attempts);
 }
 
-export function bestAttempt(attempts) {
-  if (!attempts.length) return null;
-  return attempts.reduce((best, a) => (a.score > best.score ? a : best), attempts[0]);
-}
-
 // --- local-only leaderboard ------------------------------------------------
 // Used only when no shared backend is configured. Keeps each name's best
 // score, mirroring how the real backend ranks players.
