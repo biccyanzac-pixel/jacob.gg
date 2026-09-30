@@ -245,6 +245,7 @@ test("a non-JSON body is rejected", async () => {
 test("documented HTTP failures map to typed errors", async () => {
   const expected = [
     [401, "JEV_UNAUTHORIZED", false],
+    [402, "JEV_INSUFFICIENT_CREDITS", false],
     [422, "JEV_INVALID_REQUEST", false],
     [429, "JEV_RATE_LIMITED", true],
     [529, "JEV_OVERLOADED", true],
@@ -302,4 +303,24 @@ test("empty state or question fails before any request is made", async () => {
     return true;
   });
   assert.equal(fetchImpl.callCount, 0);
+});
+
+// The real body Jev sends when the account has run dry. This must not be
+// reported as a generic outage: no retry will fix it.
+test("an out-of-credits response is identified as such", async () => {
+  const fetchImpl = stubFetch({
+    status: 402,
+    text: JSON.stringify({ code: -1, message: "Insufficient credits." }),
+  });
+
+  await assert.rejects(
+    judgeWith(fetchImpl)({ state: "hello", question: "Is this happy?" }),
+    (err) => {
+      assert.equal(err.code, "JEV_INSUFFICIENT_CREDITS");
+      assert.equal(err.httpStatus, 402);
+      assert.equal(err.retryable, false);
+      assert.match(err.message, /Insufficient credits/);
+      return true;
+    },
+  );
 });

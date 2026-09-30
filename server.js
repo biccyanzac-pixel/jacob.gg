@@ -211,11 +211,25 @@ app.use((err, req, res, next) => {
 
   console.error("[jacob.gg]", err);
 
-  // Scoring is misconfigured: an operator fix, not a player one.
+  // Scoring needs an operator fix, not a player retry. These get their own
+  // messages because "unavailable, try again" would send someone hunting
+  // through logs for something a sentence can explain.
   if (err.code === "JEV_UNCONFIGURED" || err.code === "JEV_UNAUTHORIZED") {
     return res.status(503).json({
       error: "scoring_unconfigured",
-      message: "Scoring is not configured. Add JEV_API_KEY to .env, then submit again.",
+      message:
+        err.code === "JEV_UNAUTHORIZED"
+          ? "Scoring rejected the API key. Check JEV_API_KEY in .env."
+          : "Scoring is not configured. Add JEV_API_KEY to .env, then submit again.",
+    });
+  }
+
+  if (err.code === "JEV_INSUFFICIENT_CREDITS") {
+    return res.status(503).json({
+      error: "scoring_out_of_credits",
+      message:
+        "Scoring is out of credits, so this answer was not counted. " +
+        "Top up the Jev account and submit again.",
     });
   }
 
