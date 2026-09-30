@@ -3,12 +3,16 @@
   "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "A daily one-question game, scored once per unique answer by Jev.",
+  "description": "A daily one-question game, scored once per unique answer by a local or hosted noul judge.",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test \"test/**/*.test.js\"",
-    "test:live": "node --test \"test-live/**/*.test.js\""
+    "test:local": "node --test \"test-local/**/*.test.js\"",
+    "test:live": "node --test \"test-live/**/*.test.js\"",
+    "judge:start": "node scripts/start-local-judge.mjs",
+    "judge:stop": "node scripts/start-local-judge.mjs --stop",
+    "play": "node scripts/start-local-judge.mjs && node server.js"
   },
   "engines": {
     "node": ">=24.0.0"

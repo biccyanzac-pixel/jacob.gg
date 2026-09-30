@@ -24,7 +24,9 @@ const { ensureChallenge, msUntilNextDay, todayKey } = await import("./lib/challe
 const { GameError, MAX_ANSWER, MAX_NAME, findSubmission, leaderboard, play } = await import(
   "./lib/game.js"
 );
-const { jevJudge, judgeModel } = await import("./lib/judge.js");
+const { judge, judgeBaseUrl, judgeDescription, judgeProvider, localJudgeHealth } = await import(
+  "./lib/judge.js"
+);
 
 const PORT = Number(process.env.PORT) || 3000;
 const TOKEN_COOKIE = "jgg_player";
@@ -166,7 +168,7 @@ app.post("/api/play", async (req, res, next) => {
 
     const { submission, evaluation } = await play({
       db,
-      judge: jevJudge,
+      judge,
       challenge,
       playerId,
       name: req.body?.name,
@@ -224,6 +226,17 @@ app.use((err, req, res, next) => {
     });
   }
 
+  // In local mode an unreachable judge means the local service is not up.
+  // Name the thing that starts it rather than saying "try again".
+  if (err.code === "JEV_UNREACHABLE" && judgeProvider() === "local") {
+    return res.status(503).json({
+      error: "scoring_offline",
+      message:
+        "The local scoring service is not running, so this answer was not counted. " +
+        "Start the game with start-game.cmd, which launches it automatically.",
+    });
+  }
+
   if (err.code === "JEV_INSUFFICIENT_CREDITS") {
     return res.status(503).json({
       error: "scoring_out_of_credits",
@@ -255,12 +268,29 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, () => {
   const challenge = ensureChallenge(db, todayKey());
   console.log(`jacob.gg daily is on http://localhost:${PORT}`);
-  console.log(`challenge: ${challenge.id} | judge: ${judgeModel}`);
-  if (!process.env.JEV_API_KEY) {
+  const provider = judgeProvider();
+  console.log(`challenge: ${challenge.id}`);
+  console.log(`judge: ${judgeDescription(provider)}`);
+
+  if (provider === "jev" && !process.env.JEV_API_KEY) {
     console.warn(
-      "warning: no JEV_API_KEY set. Add your key to .env (no restart needed),\n" +
-        "         or new answers cannot be scored (stored ones still work).",
+      "warning: JUDGE_PROVIDER=jev but no JEV_API_KEY set. Add your key to .env\n" +
+        "         (no restart needed), or switch to JUDGE_PROVIDER=local.",
     );
+  }
+
+  if (provider === "local") {
+    // Report reachability at boot so a missing local service is obvious here
+    // rather than only on the first submission. Health does not imply the
+    // model is loaded: jev-local builds its scorer on the first request.
+    localJudgeHealth().then(({ ok, reason }) => {
+      if (ok) console.log(`local judge: reachable at ${judgeBaseUrl("local")}`);
+      else
+        console.warn(
+          `warning: local judge not reachable at ${judgeBaseUrl("local")} (${reason}).\n` +
+            "         Start the game with start-game.cmd, which launches it for you.",
+        );
+    });
   }
 });
 

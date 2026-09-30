@@ -122,3 +122,24 @@ export function jevResponseFlat(noul, { questionId = "verdict", model = "jev-1.1
 export function jevError(code = 4001, message = "invalid question type") {
   return { code, message, data: null };
 }
+
+/**
+ * A well-formed jev-local response. It returns the flat documented shape,
+ * { model, answers, usage }, with no wrapping envelope and no credit
+ * accounting - unlike hosted Jev.
+ */
+export function jevLocalResponse(noul, {
+  questionId = "verdict",
+  model = "Qwen/Qwen2.5-1.5B-Instruct",
+} = {}) {
+  return {
+    model,
+    answers: { [questionId]: { type: "noul", noul } },
+    usage: { input_tokens: 61, output_tokens: 1 },
+  };
+}
+
+/** jev-local's health payload. */
+export function jevLocalHealth(ok = true) {
+  return { ok };
+}
