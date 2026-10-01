@@ -7,7 +7,7 @@ compatibility_date = "2026-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "jacob-gg-leaderboard"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "f43847da-3fcb-4f58-a78c-438c4ff17c01"
 
 # The browser's origin(s) allowed to call this API. Restricts the shared
 # leaderboard to this game, not the whole internet.
