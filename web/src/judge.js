@@ -15,9 +15,24 @@
  * riddle's own wording) lives in shared/gibberish.js and runs before this is
  * ever called, not as a second model evaluation.
  *
- * WebGPU when the browser has it, WebAssembly otherwise. Weights are fetched
- * from Hugging Face once and then live in the browser's Cache Storage, so a
- * second visit does not re-download them (see judgeInfo()'s isCached).
+ * WebGPU is required - not merely preferred. kev-0.6b's published weights
+ * (onnx-community/kev-0.6b-ONNX) ship only as q4 and q4f16, both using the
+ * GatherBlockQuantized ONNX operator. Confirmed by inspecting the installed
+ * onnxruntime-web bundles: that operator is implemented in the webgpu/all
+ * bundles but is genuinely absent from ort.wasm.bundle.min.mjs - this is an
+ * upstream kernel gap, not a stale dependency, and reproduced live (see
+ * web/scripts/mobile-repro.mjs): a WASM-only run fails with "Could not find
+ * an implementation for GatherBlockQuantized". There is no in-browser
+ * fallback path for this model: a device without working WebGPU cannot run
+ * it, full stop. See isWebGpuUsable() below for the mobile bug this caused -
+ * open-jev's own device auto-selection only checks `typeof navigator.gpu`,
+ * which many real mobile browsers satisfy without a functional backend, so
+ * it would pick "webgpu" and then fail with no fallback attempted at all.
+ *
+ * Weights are fetched from Hugging Face once and then live in the browser's
+ * Cache Storage, so a second visit does not re-download them (see
+ * judgeInfo()'s isCached) - but only once WebGPU has been confirmed to work,
+ * so a device that can't run the judge never pays that download for nothing.
  *
  * This is NOT hosted Jev's model. It is an open reproduction of the shape of
  * System One (kev-0.6b, based on Qwen3-0.6B-Base). No API key, no credits, no
@@ -29,9 +44,49 @@ import { assertNoul, scoreFromNoul } from "@shared/challenges.js";
 
 // Smallest model open-jev ships. dtype "auto" picks q4f16 where the device
 // supports shader-f16 and q4 otherwise, which is the smallest practical
-// quantisation in each case.
+// quantisation in each case - both need WebGPU; see the module comment.
 const MODEL = "kev-0.6b";
 const DTYPE = "auto";
+
+/** Thrown by loadJudge() when this device cannot run the judge at all,
+ * distinct from a transient load failure (network, OOM, etc). main.js
+ * branches on this to show a specific, honest message instead of a generic
+ * "could not load". */
+export class UnsupportedDeviceError extends Error {
+  constructor(message, cause) {
+    super(message);
+    this.name = "UnsupportedDeviceError";
+    this.cause = cause;
+  }
+}
+
+let webGpuUsable = null;
+
+/**
+ * Does WebGPU actually work here, not just exist? `typeof navigator.gpu` is
+ * not enough - plenty of real mobile browsers expose the API surface with a
+ * non-functional or blocklisted backend underneath (older/blocklisted
+ * Android GPU drivers, WebKit's younger WebGPU rollout, partial/experimental
+ * builds). requestAdapter() is the actual capability probe; open-jev's own
+ * "auto" device selection never calls it, which is the root cause of the
+ * production mobile bug this guards against. Cached after the first call -
+ * the answer cannot change mid-session.
+ */
+async function isWebGpuUsable() {
+  if (webGpuUsable !== null) return webGpuUsable;
+  if (typeof navigator === "undefined" || typeof navigator.gpu === "undefined") {
+    webGpuUsable = false;
+    return false;
+  }
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    webGpuUsable = Boolean(adapter);
+  } catch (err) {
+    console.error("[judge] navigator.gpu.requestAdapter() failed - WebGPU unusable here:", err);
+    webGpuUsable = false;
+  }
+  return webGpuUsable;
+}
 
 let loading = null;
 let instance = null;
@@ -52,19 +107,26 @@ export const PHASE = {
   JUDGING: "judging",
 };
 
-/** What the loader is about to fetch, without fetching it. */
+/** What the loader is about to fetch, without fetching it. `unsupported:
+ * true` means this device cannot run the judge at all (see isWebGpuUsable) -
+ * checked before anything is fetched, so an unsupported device never pays
+ * for a download that is guaranteed to fail at model-init time. */
 export async function judgeInfo() {
+  if (!(await isWebGpuUsable())) {
+    return { isCached: false, downloadBytes: 0, device: "unsupported", dtype: DTYPE, unsupported: true };
+  }
   try {
-    const info = await OpenJev.info({ model: MODEL, dtype: DTYPE });
+    const info = await OpenJev.info({ model: MODEL, dtype: DTYPE, device: "webgpu" });
     return {
       isCached: Boolean(info.isCached),
       downloadBytes: Number(info.downloadSize) || 0,
       device: info.device,
       dtype: info.dtype,
+      unsupported: false,
     };
   } catch {
     // Not fatal: we can still try to load.
-    return { isCached: false, downloadBytes: 0, device: "unknown", dtype: DTYPE };
+    return { isCached: false, downloadBytes: 0, device: "unknown", dtype: DTYPE, unsupported: false };
   }
 }
 
@@ -88,23 +150,19 @@ export function loadJudge({ onPhase } = {}) {
     return loading;
   }
 
-  let reachedFullDownload = false;
-
-  loading = OpenJev.load({
-    model: MODEL,
-    dtype: DTYPE,
-    onProgress: ({ progress, loaded, total }) => {
-      if (typeof progress !== "number") return;
-      if (progress >= 1 && !reachedFullDownload) {
-        reachedFullDownload = true;
-        onPhase?.({ phase: PHASE.INITIALIZING, progress: 1, loaded, total });
-        return;
+  loading = isWebGpuUsable()
+    .then((usable) => {
+      if (!usable) {
+        // Checked BEFORE any download: there is no WASM fallback for this
+        // model (see the module comment), so there is nothing to gain by
+        // attempting the load and every download-then-crash is a waste of
+        // the player's data for a result we already know.
+        throw new UnsupportedDeviceError(
+          "This browser can't run today's judge. Try a recent version of Chrome, Edge, or Safari with WebGPU enabled.",
+        );
       }
-      if (!reachedFullDownload) {
-        onPhase?.({ phase: PHASE.DOWNLOADING, progress, loaded, total });
-      }
-    },
-  })
+      return loadWithWebGpu(onPhase);
+    })
     .then((jev) => {
       instance = jev;
       runtime = jev.runtime;
@@ -112,7 +170,10 @@ export function loadJudge({ onPhase } = {}) {
       return jev;
     })
     .catch((err) => {
-      // Let the next attempt retry rather than caching a rejection.
+      // Let the next attempt retry rather than caching a rejection -
+      // transient failures (network, OOM) deserve a retry; an
+      // UnsupportedDeviceError will just be thrown again immediately, which
+      // is correct (the device's capability has not changed).
       loading = null;
       throw err;
     });
@@ -124,6 +185,38 @@ export function loadJudge({ onPhase } = {}) {
   onPhase?.({ phase: PHASE.INITIALIZING, progress: 0 });
 
   return loading;
+}
+
+/** The actual OpenJev.load() call, once WebGPU is confirmed usable. `device`
+ * is passed explicitly rather than "auto" - open-jev's own auto-detection
+ * only checks `typeof navigator.gpu`, which is exactly the check that let
+ * the mobile bug through; by the time this runs that capability has already
+ * been verified with a real requestAdapter() call. */
+function loadWithWebGpu(onPhase) {
+  let reachedFullDownload = false;
+  return OpenJev.load({
+    model: MODEL,
+    dtype: DTYPE,
+    device: "webgpu",
+    onProgress: ({ progress, loaded, total }) => {
+      if (typeof progress !== "number") return;
+      if (progress >= 1 && !reachedFullDownload) {
+        reachedFullDownload = true;
+        onPhase?.({ phase: PHASE.INITIALIZING, progress: 1, loaded, total });
+        return;
+      }
+      if (!reachedFullDownload) {
+        onPhase?.({ phase: PHASE.DOWNLOADING, progress, loaded, total });
+      }
+    },
+  }).catch((err) => {
+    // Wrap whatever ONNX Runtime/Transformers.js threw so the real cause is
+    // always logged in full (stack, nested cause chain), not just whatever
+    // .message happens to say - this is what makes a production failure
+    // diagnosable instead of just "today's judge could not load".
+    console.error("[judge] OpenJev.load() failed after WebGPU was confirmed usable:", err);
+    throw err;
+  });
 }
 
 /** { model, family, device, dtype } once loaded. Diagnostics only. */

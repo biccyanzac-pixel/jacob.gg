@@ -13,7 +13,7 @@ import {
 } from "@shared/challenges.js";
 import { answerHash, normalizeAnswer } from "@shared/normalize.js";
 import { looksLikeOwnInterpretation, looksLikeRealText } from "@shared/gibberish.js";
-import { PHASE, judgeInfo, loadJudge, scoreAnswer } from "./judge.js";
+import { PHASE, UnsupportedDeviceError, judgeInfo, loadJudge, scoreAnswer } from "./judge.js";
 import { fetchAttempts, fetchLeaderboard, leaderboardEnabled, loadConfig, submit } from "./api.js";
 import {
   addLocalAttempt,
@@ -303,6 +303,18 @@ function formatBytes(bytes) {
 
 async function prepareJudge() {
   const info = await judgeInfo();
+
+  if (info.unsupported) {
+    // Known ahead of time, before anything is downloaded: this device has no
+    // working WebGPU, and there is no in-browser fallback for this model -
+    // see web/src/judge.js's module comment for why. Fail immediately with a
+    // specific, honest message rather than attempting (and wasting a
+    // download on) a load that is guaranteed to crash.
+    throw new UnsupportedDeviceError(
+      "This browser can't run today's judge. Try a recent version of Chrome, Edge, or Safari with WebGPU enabled.",
+    );
+  }
+
   const totalSize = formatBytes(info.downloadBytes);
 
   if (info.isCached) {
@@ -524,8 +536,15 @@ if (hasCompletedToday()) {
   try {
     await prepareJudge();
   } catch (err) {
+    // Always logged in full (stack, name, cause) regardless of what the
+    // player sees - this is what makes a production failure diagnosable
+    // instead of just the generic headline below.
+    console.error("[main] judge failed to load:", err);
     el.preparing.hidden = false;
-    el.preparingText.textContent = "Today's judge could not load.";
+    el.preparingText.textContent =
+      err instanceof UnsupportedDeviceError
+        ? "This device can't run today's judge."
+        : "Today's judge could not load.";
     el.preparingNote.textContent =
       err?.message ?? "Check your connection and refresh to try again.";
     el.preparingBar.style.width = "0%";
