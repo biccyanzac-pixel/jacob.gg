@@ -1,5 +1,12 @@
 # kev-0.6b WASM-export investigation (not shipped)
 
+> **Update (full 58-case benchmark across all representations)**: see
+> `BENCHMARK.md` in this folder for the follow-up investigation comparing
+> FP32, q4, q4f16 and W8 across the complete `riddle-bench/cases.mjs` set,
+> cross-browser/cross-environment q4 determinism, formatting-normalization
+> experiments, and the engineering assessment for making q4 itself
+> WASM-compatible. No production code changed in that investigation either.
+
 Investigates whether the *same* kev-0.6b weights (not a different model) can be
 exported to a WASM-compatible ONNX representation, avoiding the
 `GatherBlockQuantized`/`MatMulNBits` ops that block the published
