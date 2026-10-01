@@ -1,0 +1,466 @@
+[
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 1,
+    "answer": "A competition",
+    "wasm_score": 54.49793595278744,
+    "webgpu_score": 54.49987515707569,
+    "wasm_ms": 5243
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 1,
+    "answer": "A race",
+    "wasm_score": 27.743331056626246,
+    "webgpu_score": 27.745864228862622,
+    "wasm_ms": 4403.399999976158
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 2,
+    "answer": "A conversation",
+    "wasm_score": 44.79089174970824,
+    "webgpu_score": 44.79347411103604,
+    "wasm_ms": 4082.7999999523163
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 2,
+    "answer": "A password",
+    "wasm_score": 5.198564163369701,
+    "webgpu_score": 5.198103582069276,
+    "wasm_ms": 4380.100000023842
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 3,
+    "answer": "A raffle",
+    "wasm_score": 19.4610520395954,
+    "webgpu_score": 19.462479578009948,
+    "wasm_ms": 4372.399999976158
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 4,
+    "answer": "A dream",
+    "wasm_score": 17.71962968776421,
+    "webgpu_score": 17.723356363364772,
+    "wasm_ms": 4095.5
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 5,
+    "answer": "A trance",
+    "wasm_score": 23.03577692927525,
+    "webgpu_score": 23.03790740434765,
+    "wasm_ms": 4322.600000023842
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 6,
+    "answer": "Something abstract",
+    "wasm_score": 10.960396042930721,
+    "webgpu_score": 10.961284892705587,
+    "wasm_ms": 4879.199999928474
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 7,
+    "answer": "A room",
+    "wasm_score": 36.71659046174447,
+    "webgpu_score": 36.72174260640874,
+    "wasm_ms": 4813.600000023842
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 7,
+    "answer": "A building",
+    "wasm_score": 27.624728363483918,
+    "webgpu_score": 27.627540872988405,
+    "wasm_ms": 4104.799999952316
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 8,
+    "answer": "You enter without going in by entering it",
+    "wasm_score": 91.74425718971769,
+    "webgpu_score": 91.74504088297387,
+    "wasm_ms": 4636
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 9,
+    "answer": "A sandwich",
+    "wasm_score": 16.904049650123408,
+    "webgpu_score": 16.90497733392979,
+    "wasm_ms": 4437
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 10,
+    "answer": "Purple elephant toaster",
+    "wasm_score": 31.21241925416619,
+    "webgpu_score": 31.21443614061986,
+    "wasm_ms": 4474.100000023842
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 10,
+    "answer": "asdkjfh qwoeiru",
+    "wasm_score": 27.065291153514178,
+    "webgpu_score": 27.070882696951493,
+    "wasm_ms": 5465.100000023842
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 1,
+    "answer": "Your reputation",
+    "wasm_score": 59.31918770398086,
+    "webgpu_score": 59.32681649349277,
+    "wasm_ms": 6534.300000071526
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 2,
+    "answer": "A rumor about you",
+    "wasm_score": 43.454987107892116,
+    "webgpu_score": 43.45837325469887,
+    "wasm_ms": 4824
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 2,
+    "answer": "Your past mistakes",
+    "wasm_score": 36.47729179416173,
+    "webgpu_score": 36.481976684317004,
+    "wasm_ms": 5247.100000023842
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 3,
+    "answer": "A deadline you already missed",
+    "wasm_score": 9.998647890903634,
+    "webgpu_score": 9.999905229628277,
+    "wasm_ms": 5005.300000071526
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 4,
+    "answer": "The sunset",
+    "wasm_score": 41.135308736819724,
+    "webgpu_score": 41.139927301775664,
+    "wasm_ms": 4501.899999976158
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 5,
+    "answer": "Your shadow at the right time of day",
+    "wasm_score": 31.108574422245578,
+    "webgpu_score": 31.10921823323651,
+    "wasm_ms": 5026.899999976158
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 6,
+    "answer": "Time",
+    "wasm_score": 68.90571016970277,
+    "webgpu_score": 68.90987838491925,
+    "wasm_ms": 4387.900000095367
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 7,
+    "answer": "A person standing behind you in a queue",
+    "wasm_score": 60.0319938406376,
+    "webgpu_score": 60.035998136096545,
+    "wasm_ms": 5520.5
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 8,
+    "answer": "Something behind me before I pass it",
+    "wasm_score": 94.08684032494051,
+    "webgpu_score": 94.0878881278852,
+    "wasm_ms": 4596.600000023842
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 9,
+    "answer": "A sandwich",
+    "wasm_score": 24.557547038813595,
+    "webgpu_score": 24.55827587373238,
+    "wasm_ms": 5404.5
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 10,
+    "answer": "Banana telephone quantum",
+    "wasm_score": 20.461745319671934,
+    "webgpu_score": 20.460201026588713,
+    "wasm_ms": 5465.399999976158
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 1,
+    "answer": "That you don't need it",
+    "wasm_score": 8.890696739748888,
+    "webgpu_score": 8.890615627560212,
+    "wasm_ms": 6628.600000023842
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 2,
+    "answer": "Your independence",
+    "wasm_score": 44.92322939560855,
+    "webgpu_score": 44.92365412508945,
+    "wasm_ms": 7495.100000023842
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 3,
+    "answer": "A superstition losing its power over you",
+    "wasm_score": 35.03137158802118,
+    "webgpu_score": 35.03470338724119,
+    "wasm_ms": 6085.799999952316
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 4,
+    "answer": "That you've moved on",
+    "wasm_score": 43.65415777055668,
+    "webgpu_score": 43.65428678858759,
+    "wasm_ms": 5747.599999904633
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 5,
+    "answer": "Doubt itself",
+    "wasm_score": 20.622937727153566,
+    "webgpu_score": 20.626591066100584,
+    "wasm_ms": 6072
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 6,
+    "answer": "A feeling",
+    "wasm_score": 30.30549807249691,
+    "webgpu_score": 30.30472257996375,
+    "wasm_ms": 4666.299999952316
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 7,
+    "answer": "A fact",
+    "wasm_score": 39.326691168228386,
+    "webgpu_score": 39.32598575191685,
+    "wasm_ms": 4828.699999928474
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 8,
+    "answer": "Believing it more true when you stop believing",
+    "wasm_score": 86.62750906084776,
+    "webgpu_score": 86.62877948464474,
+    "wasm_ms": 5805.300000071526
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 9,
+    "answer": "A sandwich",
+    "wasm_score": 13.331786051795275,
+    "webgpu_score": 13.329227061026053,
+    "wasm_ms": 4701
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 10,
+    "answer": "Glorble wafflecopter nine",
+    "wasm_score": 17.548863343994135,
+    "webgpu_score": 17.547141992689504,
+    "wasm_ms": 5019.199999928474
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 1,
+    "answer": "A message",
+    "wasm_score": 25.759779697082898,
+    "webgpu_score": 25.7591778417543,
+    "wasm_ms": 6749.800000071526
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 1,
+    "answer": "A voicemail",
+    "wasm_score": 7.249725224983304,
+    "webgpu_score": 7.249396584066497,
+    "wasm_ms": 7873.099999904633
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 2,
+    "answer": "A note",
+    "wasm_score": 47.84387632153243,
+    "webgpu_score": 47.84211530752278,
+    "wasm_ms": 7119.199999928474
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 2,
+    "answer": "An impression",
+    "wasm_score": 24.360632398741267,
+    "webgpu_score": 24.359305690373684,
+    "wasm_ms": 6487.600000023842
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 3,
+    "answer": "A legacy",
+    "wasm_score": 16.70281134800222,
+    "webgpu_score": 16.70245973718637,
+    "wasm_ms": 7099.300000071526
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 4,
+    "answer": "A job, by quitting in your head",
+    "wasm_score": 3.6552931123114405,
+    "webgpu_score": 3.6550110056657696,
+    "wasm_ms": 6829.200000047684
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 5,
+    "answer": "A relationship, emotionally",
+    "wasm_score": 3.380217266400491,
+    "webgpu_score": 3.380230503733967,
+    "wasm_ms": 5906.200000047684
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 6,
+    "answer": "Something behind",
+    "wasm_score": 18.074909521988182,
+    "webgpu_score": 18.0761593438614,
+    "wasm_ms": 6170.799999952316
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 7,
+    "answer": "Your house",
+    "wasm_score": 17.95373687660597,
+    "webgpu_score": 17.95302044101062,
+    "wasm_ms": 6350.399999976158
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 8,
+    "answer": "Leaving without going anywhere at all",
+    "wasm_score": 89.33233118112766,
+    "webgpu_score": 89.33382155562344,
+    "wasm_ms": 8427.700000047684
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 9,
+    "answer": "A sandwich",
+    "wasm_score": 15.94377550184537,
+    "webgpu_score": 15.941583701101116,
+    "wasm_ms": 7895.399999976158
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 10,
+    "answer": "Xylophone quantum soup",
+    "wasm_score": 2.5112524823813143,
+    "webgpu_score": 2.510502545161283,
+    "wasm_ms": 7605.700000047684
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 1,
+    "answer": "Your voice, in a crowd",
+    "wasm_score": 7.27468908195238,
+    "webgpu_score": 7.274261299762835,
+    "wasm_ms": 8602.100000023842
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 2,
+    "answer": "Peace of mind",
+    "wasm_score": 13.634196904331924,
+    "webgpu_score": 13.633393994572499,
+    "wasm_ms": 7657.200000047684
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 2,
+    "answer": "Gratitude",
+    "wasm_score": 15.923164339126602,
+    "webgpu_score": 15.92516893869728,
+    "wasm_ms": 6864.699999928474
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 3,
+    "answer": "A sense of home",
+    "wasm_score": 0.9910590652882538,
+    "webgpu_score": 0.9909425673819172,
+    "wasm_ms": 6545.5
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 4,
+    "answer": "Your appetite, after being sick",
+    "wasm_score": 3.121024219049904,
+    "webgpu_score": 3.121084774067737,
+    "wasm_ms": 6234.199999928474
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 5,
+    "answer": "Confidence",
+    "wasm_score": 11.778507673323059,
+    "webgpu_score": 11.779124572180653,
+    "wasm_ms": 7182.100000023842
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 6,
+    "answer": "Something important",
+    "wasm_score": 26.589099047173946,
+    "webgpu_score": 26.594767715961925,
+    "wasm_ms": 7923.5
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 7,
+    "answer": "Your keys",
+    "wasm_score": 18.448131495986665,
+    "webgpu_score": 18.45059227675432,
+    "wasm_ms": 7003.5
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 8,
+    "answer": "Found only after it is lost, which is lost",
+    "wasm_score": 38.38079638875509,
+    "webgpu_score": 38.386547908297636,
+    "wasm_ms": 8147
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 9,
+    "answer": "A sandwich",
+    "wasm_score": 5.002028889316532,
+    "webgpu_score": 5.001864617950939,
+    "wasm_ms": 6349.399999976158
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 10,
+    "answer": "Marmalade dinosaur printer",
+    "wasm_score": 6.234091623233338,
+    "webgpu_score": 6.2339271728457195,
+    "wasm_ms": 6798.199999928474
+  }
+]

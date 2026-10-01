@@ -1,0 +1,524 @@
+[
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 1,
+    "answer": "A competition",
+    "noul": 0.5449793595278744,
+    "score": 54.49793595278744,
+    "ms": 5243,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 1,
+    "answer": "A race",
+    "noul": 0.27743331056626247,
+    "score": 27.743331056626246,
+    "ms": 4403.399999976158,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 2,
+    "answer": "A conversation",
+    "noul": 0.4479089174970824,
+    "score": 44.79089174970824,
+    "ms": 4082.7999999523163,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 2,
+    "answer": "A password",
+    "noul": 0.05198564163369701,
+    "score": 5.198564163369701,
+    "ms": 4380.100000023842,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 3,
+    "answer": "A raffle",
+    "noul": 0.194610520395954,
+    "score": 19.4610520395954,
+    "ms": 4372.399999976158,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 4,
+    "answer": "A dream",
+    "noul": 0.17719629687764213,
+    "score": 17.71962968776421,
+    "ms": 4095.5,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 5,
+    "answer": "A trance",
+    "noul": 0.2303577692927525,
+    "score": 23.03577692927525,
+    "ms": 4322.600000023842,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 6,
+    "answer": "Something abstract",
+    "noul": 0.10960396042930722,
+    "score": 10.960396042930721,
+    "ms": 4879.199999928474,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 7,
+    "answer": "A room",
+    "noul": 0.36716590461744464,
+    "score": 36.71659046174447,
+    "ms": 4813.600000023842,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 7,
+    "answer": "A building",
+    "noul": 0.2762472836348392,
+    "score": 27.624728363483918,
+    "ms": 4104.799999952316,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 8,
+    "answer": "You enter without going in by entering it",
+    "noul": 0.9174425718971769,
+    "score": 91.74425718971769,
+    "ms": 4636,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 9,
+    "answer": "A sandwich",
+    "noul": 0.16904049650123407,
+    "score": 16.904049650123408,
+    "ms": 4437,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 10,
+    "answer": "Purple elephant toaster",
+    "noul": 0.3121241925416619,
+    "score": 31.21241925416619,
+    "ms": 4474.100000023842,
+    "ok": true
+  },
+  {
+    "riddle": "enter-without-going-in",
+    "tier": 10,
+    "answer": "asdkjfh qwoeiru",
+    "noul": 0.27065291153514176,
+    "score": 27.065291153514178,
+    "ms": 5465.100000023842,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 1,
+    "answer": "Your reputation",
+    "noul": 0.5931918770398086,
+    "score": 59.31918770398086,
+    "ms": 6534.300000071526,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 2,
+    "answer": "A rumor about you",
+    "noul": 0.4345498710789211,
+    "score": 43.454987107892116,
+    "ms": 4824,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 2,
+    "answer": "Your past mistakes",
+    "noul": 0.3647729179416173,
+    "score": 36.47729179416173,
+    "ms": 5247.100000023842,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 3,
+    "answer": "A deadline you already missed",
+    "noul": 0.09998647890903634,
+    "score": 9.998647890903634,
+    "ms": 5005.300000071526,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 4,
+    "answer": "The sunset",
+    "noul": 0.41135308736819726,
+    "score": 41.135308736819724,
+    "ms": 4501.899999976158,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 5,
+    "answer": "Your shadow at the right time of day",
+    "noul": 0.3110857442224558,
+    "score": 31.108574422245578,
+    "ms": 5026.899999976158,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 6,
+    "answer": "Time",
+    "noul": 0.6890571016970277,
+    "score": 68.90571016970277,
+    "ms": 4387.900000095367,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 7,
+    "answer": "A person standing behind you in a queue",
+    "noul": 0.600319938406376,
+    "score": 60.0319938406376,
+    "ms": 5520.5,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 8,
+    "answer": "Something behind me before I pass it",
+    "noul": 0.9408684032494051,
+    "score": 94.08684032494051,
+    "ms": 4596.600000023842,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 9,
+    "answer": "A sandwich",
+    "noul": 0.24557547038813596,
+    "score": 24.557547038813595,
+    "ms": 5404.5,
+    "ok": true
+  },
+  {
+    "riddle": "behind-before-passed",
+    "tier": 10,
+    "answer": "Banana telephone quantum",
+    "noul": 0.20461745319671934,
+    "score": 20.461745319671934,
+    "ms": 5465.399999976158,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 1,
+    "answer": "That you don't need it",
+    "noul": 0.08890696739748888,
+    "score": 8.890696739748888,
+    "ms": 6628.600000023842,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 2,
+    "answer": "Your independence",
+    "noul": 0.4492322939560855,
+    "score": 44.92322939560855,
+    "ms": 7495.100000023842,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 3,
+    "answer": "A superstition losing its power over you",
+    "noul": 0.3503137158802118,
+    "score": 35.03137158802118,
+    "ms": 6085.799999952316,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 4,
+    "answer": "That you've moved on",
+    "noul": 0.4365415777055668,
+    "score": 43.65415777055668,
+    "ms": 5747.599999904633,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 5,
+    "answer": "Doubt itself",
+    "noul": 0.20622937727153565,
+    "score": 20.622937727153566,
+    "ms": 6072,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 6,
+    "answer": "A feeling",
+    "noul": 0.3030549807249691,
+    "score": 30.30549807249691,
+    "ms": 4666.299999952316,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 7,
+    "answer": "A fact",
+    "noul": 0.3932669116822839,
+    "score": 39.326691168228386,
+    "ms": 4828.699999928474,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 8,
+    "answer": "Believing it more true when you stop believing",
+    "noul": 0.8662750906084776,
+    "score": 86.62750906084776,
+    "ms": 5805.300000071526,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 9,
+    "answer": "A sandwich",
+    "noul": 0.13331786051795275,
+    "score": 13.331786051795275,
+    "ms": 4701,
+    "ok": true
+  },
+  {
+    "riddle": "more-true-when-stop-believing",
+    "tier": 10,
+    "answer": "Glorble wafflecopter nine",
+    "noul": 0.17548863343994137,
+    "score": 17.548863343994135,
+    "ms": 5019.199999928474,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 1,
+    "answer": "A message",
+    "noul": 0.25759779697082896,
+    "score": 25.759779697082898,
+    "ms": 6749.800000071526,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 1,
+    "answer": "A voicemail",
+    "noul": 0.07249725224983304,
+    "score": 7.249725224983304,
+    "ms": 7873.099999904633,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 2,
+    "answer": "A note",
+    "noul": 0.4784387632153243,
+    "score": 47.84387632153243,
+    "ms": 7119.199999928474,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 2,
+    "answer": "An impression",
+    "noul": 0.24360632398741267,
+    "score": 24.360632398741267,
+    "ms": 6487.600000023842,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 3,
+    "answer": "A legacy",
+    "noul": 0.16702811348002222,
+    "score": 16.70281134800222,
+    "ms": 7099.300000071526,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 4,
+    "answer": "A job, by quitting in your head",
+    "noul": 0.036552931123114404,
+    "score": 3.6552931123114405,
+    "ms": 6829.200000047684,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 5,
+    "answer": "A relationship, emotionally",
+    "noul": 0.03380217266400491,
+    "score": 3.380217266400491,
+    "ms": 5906.200000047684,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 6,
+    "answer": "Something behind",
+    "noul": 0.18074909521988183,
+    "score": 18.074909521988182,
+    "ms": 6170.799999952316,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 7,
+    "answer": "Your house",
+    "noul": 0.1795373687660597,
+    "score": 17.95373687660597,
+    "ms": 6350.399999976158,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 8,
+    "answer": "Leaving without going anywhere at all",
+    "noul": 0.8933233118112766,
+    "score": 89.33233118112766,
+    "ms": 8427.700000047684,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 9,
+    "answer": "A sandwich",
+    "noul": 0.1594377550184537,
+    "score": 15.94377550184537,
+    "ms": 7895.399999976158,
+    "ok": true
+  },
+  {
+    "riddle": "leave-without-going-anywhere",
+    "tier": 10,
+    "answer": "Xylophone quantum soup",
+    "noul": 0.025112524823813143,
+    "score": 2.5112524823813143,
+    "ms": 7605.700000047684,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 1,
+    "answer": "Your voice, in a crowd",
+    "noul": 0.0727468908195238,
+    "score": 7.27468908195238,
+    "ms": 8602.100000023842,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 2,
+    "answer": "Peace of mind",
+    "noul": 0.13634196904331924,
+    "score": 13.634196904331924,
+    "ms": 7657.200000047684,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 2,
+    "answer": "Gratitude",
+    "noul": 0.15923164339126603,
+    "score": 15.923164339126602,
+    "ms": 6864.699999928474,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 3,
+    "answer": "A sense of home",
+    "noul": 0.009910590652882538,
+    "score": 0.9910590652882538,
+    "ms": 6545.5,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 4,
+    "answer": "Your appetite, after being sick",
+    "noul": 0.03121024219049904,
+    "score": 3.121024219049904,
+    "ms": 6234.199999928474,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 5,
+    "answer": "Confidence",
+    "noul": 0.11778507673323059,
+    "score": 11.778507673323059,
+    "ms": 7182.100000023842,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 6,
+    "answer": "Something important",
+    "noul": 0.2658909904717395,
+    "score": 26.589099047173946,
+    "ms": 7923.5,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 7,
+    "answer": "Your keys",
+    "noul": 0.18448131495986667,
+    "score": 18.448131495986665,
+    "ms": 7003.5,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 8,
+    "answer": "Found only after it is lost, which is lost",
+    "noul": 0.38380796388755084,
+    "score": 38.38079638875509,
+    "ms": 8147,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 9,
+    "answer": "A sandwich",
+    "noul": 0.050020288893165316,
+    "score": 5.002028889316532,
+    "ms": 6349.399999976158,
+    "ok": true
+  },
+  {
+    "riddle": "found-only-after-lost",
+    "tier": 10,
+    "answer": "Marmalade dinosaur printer",
+    "noul": 0.062340916232333385,
+    "score": 6.234091623233338,
+    "ms": 6798.199999928474,
+    "ok": true
+  }
+]
