@@ -74,7 +74,14 @@ async function run(label, initScript, deviceOptions = {}) {
     page
       .waitForFunction(
         () => /could not load|can't run today's judge/i.test(document.getElementById("preparing-text")?.textContent ?? ""),
-        { timeout: 4 * 60 * 1000 },
+        // waitForFunction's signature is (pageFunction, arg, options) - the
+        // options object MUST go third. Passing it second (the mistake this
+        // comment replaces) silently became `arg` instead, so Playwright's
+        // default 30s timeout applied regardless of what was written here,
+        // and the "success" race branch kept losing to a false "timeout" on
+        // anything slower than 30s (e.g. the real ~60s production download).
+        undefined,
+        { timeout: 4 * 60 * 1000, polling: 500 },
       )
       .then(() => "failed"),
   ]).catch(() => "timeout");
