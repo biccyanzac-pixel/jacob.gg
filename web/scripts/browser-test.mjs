@@ -7,19 +7,23 @@
  * different interpretations through the real UI, and inspects the real DOM
  * and real network requests. No mocking.
  *
- *   node scripts/browser-test.mjs <url>
+ *   node scripts/browser-test.mjs <frontend-url> [worker-url]
  *
- * Note: with no shared backend deployed (config.json's leaderboardUrl is
- * null), this exercises the local-fallback leaderboard, not the cross-device
- * answer-visibility gating - that is covered separately and for real by
- * worker/test/e2e.mjs against a live Miniflare instance.
+ * When `worker-url` is given, this also verifies the frontend is genuinely
+ * talking to that live Worker rather than silently falling back to
+ * per-device localStorage: it checks for real outgoing requests to it, that
+ * the local-fallback notice never appears, and - the strongest check - that
+ * a second, completely fresh browser context (no shared localStorage) can
+ * see the first player on its OWN leaderboard read, which is only possible
+ * if the board came from the shared backend over the network.
  */
 import { chromium } from "playwright-core";
 import fs from "node:fs";
 
 const URL = process.argv[2];
+const WORKER_URL = process.argv[3] || null;
 if (!URL) {
-  console.error("usage: node scripts/browser-test.mjs <url>");
+  console.error("usage: node scripts/browser-test.mjs <frontend-url> [worker-url]");
   process.exit(1);
 }
 
@@ -60,14 +64,16 @@ async function submitAndWait(page, name, answer, expectedRows) {
   await page.waitForTimeout(500);
 }
 
+const uniqueName = (base) => `${base}${Date.now() % 100000}`;
+
 try {
   console.log(`\n=== session 1 (player A) ===`);
   console.log(`opening ${URL}`);
   const ctxA = await browser.newContext();
   const pageA = await ctxA.newPage();
 
-  const requests = [];
-  pageA.on("request", (req) => requests.push(req.url()));
+  const requestsA = [];
+  pageA.on("request", (req) => requestsA.push(req.url()));
   const consoleErrors = [];
   pageA.on("pageerror", (err) => consoleErrors.push(String(err)));
 
@@ -91,6 +97,18 @@ try {
     `"${riddleNote}"`,
   );
 
+  if (WORKER_URL) {
+    const configReq = await pageA.waitForResponse((r) => r.url().includes("config.json"), {
+      timeout: 10000,
+    }).catch(() => null);
+    const config = configReq ? await configReq.json().catch(() => null) : null;
+    check(
+      "the live page's config.json points at the deployed Worker (not null)",
+      config?.leaderboardUrl === WORKER_URL,
+      `got ${JSON.stringify(config)}`,
+    );
+  }
+
   await waitForJudgeReady(pageA);
   check("judge finished loading, play form visible", true);
   try {
@@ -103,9 +121,10 @@ try {
   // --- three genuinely different interpretations --------------------------
   const ANSWERS = ["a room", "a competition", "a conversation"];
   const individualScores = [];
+  const nameA = uniqueName("Ada");
 
   for (let i = 0; i < 3; i += 1) {
-    await submitAndWait(pageA, "Ada", ANSWERS[i], i + 1);
+    await submitAndWait(pageA, nameA, ANSWERS[i], i + 1);
     const rows = await pageA.locator(".attempt-row").count();
     check(`attempt ${i + 1}: attempt list shows exactly ${i + 1} row(s)`, rows === i + 1, `rows=${rows}`);
 
@@ -123,6 +142,13 @@ try {
       answerTexts[i] === ANSWERS[i],
       `"${answerTexts[i]}" vs "${ANSWERS[i]}"`,
     );
+
+    if (WORKER_URL) {
+      check(
+        `attempt ${i + 1}: a real request was sent to the deployed Worker`,
+        requestsA.some((u) => u.startsWith(WORKER_URL)),
+      );
+    }
   }
 
   const dailyScoreText = await pageA.locator("#daily-score").textContent();
@@ -145,11 +171,24 @@ try {
   check("play form is hidden after 3 attempts (no 4th submission possible)", await pageA.locator("#play").isHidden());
   check("a clear 'all attempts used' message is shown", !(await pageA.locator("#attempts-done").isHidden()));
 
+  // --- genuinely using the shared backend, not silently falling back -------
+  if (WORKER_URL) {
+    const localFallbackNoteVisible = !(await pageA.locator("#board-note").isHidden());
+    const localFallbackText = localFallbackNoteVisible
+      ? await pageA.locator("#board-note").textContent()
+      : "";
+    check(
+      "the local-fallback notice never appeared (frontend used the real Worker throughout)",
+      !/this device|not switched on/i.test(localFallbackText ?? ""),
+      `note visible=${localFallbackNoteVisible} text="${localFallbackText}"`,
+    );
+  }
+
   // --- no Jev API, no secrets, no crashes ------------------------------------
-  const jevCalls = requests.filter((u) => /thejevai\.com/i.test(u));
+  const jevCalls = requestsA.filter((u) => /thejevai\.com/i.test(u));
   check("no request ever made to the hosted Jev API", jevCalls.length === 0, `${jevCalls.length} calls`);
   const secretPattern = /sk_[A-Za-z0-9]{10,}|JEV_API_KEY|gho_[A-Za-z0-9]{10,}/i;
-  check("no secret in any outgoing request URL", !requests.some((u) => secretPattern.test(u)));
+  check("no secret in any outgoing request URL", !requestsA.some((u) => secretPattern.test(u)));
   check("no uncaught page errors", consoleErrors.length === 0, consoleErrors.join(" | "));
 
   // --- the UI never names the model/AI mechanics -----------------------------
@@ -159,7 +198,7 @@ try {
     !/kev-0\.6b|open-jev|transformers\.js|noul probability/i.test(bodyText),
   );
 
-  // --- refresh persistence --------------------------------------------------
+  // --- refresh persistence, and refresh does not silently drop the backend --
   await pageA.reload({ waitUntil: "domcontentloaded" });
   await pageA.waitForFunction(() => document.getElementById("attempts")?.hidden === false, {
     timeout: 15000,
@@ -172,10 +211,14 @@ try {
   );
   check("all 3 attempts still shown after refresh", (await pageA.locator(".attempt-row").count()) === 3);
   check("play form still hidden after refresh (3/3 used)", await pageA.locator("#play").isHidden());
+  if (WORKER_URL) {
+    const stillNoFallbackNote = await pageA.locator("#board-note").isHidden();
+    check("after refresh, still no local-fallback notice (still using the Worker)", stillNoFallbackNote);
+  }
 
   // --- yesterday's gallery: present or absent without crashing --------------
   const yesterdayHidden = await pageA.locator("#yesterday").isHidden();
-  console.log(`  INFO  yesterday's-interpretations panel hidden: ${yesterdayHidden} (expected with no shared backend deployed)`);
+  console.log(`  INFO  yesterday's-interpretations panel hidden: ${yesterdayHidden}`);
 
   await ctxA.close();
 
@@ -187,9 +230,42 @@ try {
   await waitForJudgeReady(pageB);
   check("a second, independent browser session can load and play", true);
 
-  await submitAndWait(pageB, "Bea", "a password", 1);
+  if (WORKER_URL) {
+    // Strongest shared-backend proof: B's fresh, empty localStorage still
+    // shows A on the leaderboard - that data can only have come from the
+    // network, never from this browser's own storage.
+    await pageB.waitForFunction(() => document.getElementById("board")?.hidden === false, {
+      timeout: 15000,
+    }).catch(() => {});
+    const boardRowNames = await pageB.locator(".row-name").allTextContents();
+    check(
+      "a brand-new browser session (empty localStorage) sees player A on ITS OWN leaderboard read - proof of a real shared backend",
+      boardRowNames.some((t) => t.includes(nameA)),
+      JSON.stringify(boardRowNames),
+    );
+    const boardRowAnswers = await pageB.locator(".row-answer").allTextContents();
+    check(
+      "player B, having made zero attempts yet, does NOT see A's answer text",
+      boardRowAnswers.length === 0,
+      JSON.stringify(boardRowAnswers),
+    );
+  }
+
+  const nameB = uniqueName("Bea");
+  await submitAndWait(pageB, nameB, "a password", 1);
   const bScore = Number((await pageB.locator(".attempt-score").allTextContents())[0]);
   check("second player gets a real per-attempt score", Number.isFinite(bScore) && bScore >= 0 && bScore <= 100);
+
+  if (WORKER_URL) {
+    await submitAndWait(pageB, nameB, "a dream", 2);
+    await submitAndWait(pageB, nameB, "a trance", 3);
+    const boardRowAnswersAfter = await pageB.locator(".row-answer").allTextContents();
+    check(
+      "after B's own 3rd attempt, A's real answer text is now visible to B",
+      boardRowAnswersAfter.some((t) => t.length > 0),
+      JSON.stringify(boardRowAnswersAfter),
+    );
+  }
 
   await ctxB.close();
 } finally {
