@@ -1,0 +1,196 @@
+{
+  "runtime": {
+    "model": "onnx-community/kev-0.6b-ONNX",
+    "family": "kev",
+    "device": "webgpu",
+    "dtype": "q4"
+  },
+  "groups": {
+    "case1_capitalization": [
+      {
+        "answer": "A room",
+        "noul": 0.3672174260640874,
+        "score": 36.72174260640874
+      },
+      {
+        "answer": "a room",
+        "noul": 0.4277567608215176,
+        "score": 42.77567608215176
+      },
+      {
+        "answer": "A ROOM",
+        "noul": 0.3605873259728606,
+        "score": 36.05873259728606
+      },
+      {
+        "answer": "a RoOm",
+        "noul": 0.6194202479911206,
+        "score": 61.94202479911206
+      }
+    ],
+    "case2_leading_trailing_ws": [
+      {
+        "answer": "A room",
+        "noul": 0.3672174260640874,
+        "score": 36.72174260640874
+      },
+      {
+        "answer": " A room",
+        "noul": 0.38904545595977136,
+        "score": 38.90454559597713
+      },
+      {
+        "answer": "A room ",
+        "noul": 0.3680540481770443,
+        "score": 36.80540481770443
+      },
+      {
+        "answer": "  A room  ",
+        "noul": 0.30639002312124936,
+        "score": 30.639002312124937
+      }
+    ],
+    "case3_internal_ws": [
+      {
+        "answer": "A room",
+        "noul": 0.3672174260640874,
+        "score": 36.72174260640874
+      },
+      {
+        "answer": "A  room",
+        "noul": 0.2705572885064144,
+        "score": 27.05572885064144
+      },
+      {
+        "answer": "A   room",
+        "noul": 0.48385906978740056,
+        "score": 48.38590697874005
+      }
+    ],
+    "case4_punctuation": [
+      {
+        "answer": "A room",
+        "noul": 0.3672174260640874,
+        "score": 36.72174260640874
+      },
+      {
+        "answer": "A room.",
+        "noul": 0.2748803539419359,
+        "score": 27.488035394193588
+      },
+      {
+        "answer": "A room!",
+        "noul": 0.36585396559297517,
+        "score": 36.585396559297514
+      },
+      {
+        "answer": "A room?",
+        "noul": 0.3805409716583973,
+        "score": 38.05409716583973
+      },
+      {
+        "answer": "A room,",
+        "noul": 0.36908142825420603,
+        "score": 36.908142825420605
+      }
+    ],
+    "case5_combinations": [
+      {
+        "answer": "A room",
+        "noul": 0.3672174260640874,
+        "score": 36.72174260640874
+      },
+      {
+        "answer": "  a room.",
+        "noul": 0.23215498395944242,
+        "score": 23.21549839594424
+      },
+      {
+        "answer": "A  ROOM!",
+        "noul": 0.33622058130700944,
+        "score": 33.62205813070094
+      },
+      {
+        "answer": " a room,  ",
+        "noul": 0.2501449529774055,
+        "score": 25.014495297740552
+      }
+    ],
+    "case6_articles": [
+      {
+        "answer": "competition",
+        "noul": 0.3545520014072981,
+        "score": 35.45520014072981
+      },
+      {
+        "answer": "a competition",
+        "noul": 0.4967425330419467,
+        "score": 49.67425330419467
+      },
+      {
+        "answer": "exit",
+        "noul": 0.39262675743932374,
+        "score": 39.26267574393238
+      },
+      {
+        "answer": "an exit",
+        "noul": 0.7304025607542873,
+        "score": 73.04025607542873
+      }
+    ],
+    "case7_adversarial_punctuation": [
+      {
+        "answer": "a dead-end",
+        "noul": 0.10136735900659909,
+        "score": 10.13673590065991
+      },
+      {
+        "answer": "a dead end",
+        "noul": 0.06312874993543081,
+        "score": 6.3128749935430815
+      },
+      {
+        "answer": "don't look back",
+        "noul": 0.22072146315687777,
+        "score": 22.072146315687778
+      },
+      {
+        "answer": "dont look back",
+        "noul": 0.134385661607596,
+        "score": 13.4385661607596
+      },
+      {
+        "answer": "4pm",
+        "noul": 0.27833580521955187,
+        "score": 27.833580521955188
+      },
+      {
+        "answer": "4 p.m.",
+        "noul": 0.357192997390311,
+        "score": 35.7192997390311
+      }
+    ],
+    "case8_adversarial_length": [
+      {
+        "answer": "exit",
+        "noul": 0.39262675743932374,
+        "score": 39.26267574393238
+      },
+      {
+        "answer": "exit.",
+        "noul": 0.47133089019228563,
+        "score": 47.133089019228564
+      },
+      {
+        "answer": "the exit to the building",
+        "noul": 0.23895127384908332,
+        "score": 23.89512738490833
+      },
+      {
+        "answer": "the exit to the building.",
+        "noul": 0.1870659603841234,
+        "score": 18.70659603841234
+      }
+    ]
+  }
+}

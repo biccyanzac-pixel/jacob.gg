@@ -15,24 +15,36 @@
  * riddle's own wording) lives in shared/gibberish.js and runs before this is
  * ever called, not as a second model evaluation.
  *
- * WebGPU is required - not merely preferred. kev-0.6b's published weights
- * (onnx-community/kev-0.6b-ONNX) ship only as q4 and q4f16, both using the
- * GatherBlockQuantized ONNX operator. Confirmed by inspecting the installed
- * onnxruntime-web bundles: that operator is implemented in the webgpu/all
- * bundles but is genuinely absent from ort.wasm.bundle.min.mjs - this is an
- * upstream kernel gap, not a stale dependency, and reproduced live (see
- * web/scripts/mobile-repro.mjs): a WASM-only run fails with "Could not find
- * an implementation for GatherBlockQuantized". There is no in-browser
- * fallback path for this model: a device without working WebGPU cannot run
- * it, full stop. See isWebGpuUsable() below for the mobile bug this caused -
- * open-jev's own device auto-selection only checks `typeof navigator.gpu`,
- * which many real mobile browsers satisfy without a functional backend, so
- * it would pick "webgpu" and then fail with no fallback attempted at all.
+ * WebGPU is the primary path, with a same-model WASM fallback for devices
+ * without usable WebGPU. kev-0.6b's published weights (onnx-community/
+ * kev-0.6b-ONNX) ship only as q4 and q4f16, both using the
+ * GatherBlockQuantized/MatMulNBits ONNX operators. Those operators turned
+ * out to have a genuinely working CPU/WASM implementation all along - but
+ * only in onnxruntime-web's plain "wasm" bundle, not the combined
+ * "webgpu" bundle that open-jev/Transformers.js's own model loader always
+ * resolves to regardless of the requested device (confirmed via the actual
+ * failing stack trace - see web/scripts/kev-wasm-export/
+ * PART_A_AND_B_REPORT.md for the full investigation and the 58-case
+ * benchmark showing q4-via-WebGPU and q4-via-plain-WASM agree to within
+ * 0.01 points, 100% binary agreement, 0 flips). judge-wasm.js talks to
+ * that plain bundle directly, bypassing open-jev's loader for the WASM
+ * case only, and reimplements the same "kev" family input construction
+ * open-jev's own code uses - same model file, same math, same statement.
+ *
+ * dtype is always explicit "q4" on both paths, never "auto": open-jev's
+ * auto-selection can pick "q4f16" when the WebGPU adapter reports
+ * shader-f16, and q4f16 has no WASM-path equivalent (it is a WebGPU-only
+ * dtype). Using "q4" unconditionally means every player, on either
+ * backend, gets literally the same model file - see isWebGpuUsable() below
+ * for the separate mobile bug (WebGPU existing but non-functional) this
+ * module also guards against.
  *
  * Weights are fetched from Hugging Face once and then live in the browser's
- * Cache Storage, so a second visit does not re-download them (see
- * judgeInfo()'s isCached) - but only once WebGPU has been confirmed to work,
- * so a device that can't run the judge never pays that download for nothing.
+ * cache (judgeInfo()'s isCached tracks the WebGPU path's own Transformers.js
+ * cache; the WASM path relies on ordinary HTTP caching of the same
+ * immutable files) - but only once a usable backend is known, so a device
+ * with neither working WebGPU nor WASM never pays for a download that is
+ * guaranteed to fail.
  *
  * This is NOT hosted Jev's model. It is an open reproduction of the shape of
  * System One (kev-0.6b, based on Qwen3-0.6B-Base). No API key, no credits, no
@@ -41,12 +53,13 @@
 
 import { OpenJev, noul } from "open-jev";
 import { assertNoul, scoreFromNoul } from "@shared/challenges.js";
+import { loadJudgeWasm } from "./judge-wasm.js";
 
-// Smallest model open-jev ships. dtype "auto" picks q4f16 where the device
-// supports shader-f16 and q4 otherwise, which is the smallest practical
-// quantisation in each case - both need WebGPU; see the module comment.
+// Smallest model open-jev ships. dtype is always explicit "q4" - never
+// "auto" - so WebGPU and WASM always load the identical representation;
+// see the module comment.
 const MODEL = "kev-0.6b";
-const DTYPE = "auto";
+const DTYPE = "q4";
 
 /** Thrown by loadJudge() when this device cannot run the judge at all,
  * distinct from a transient load failure (network, OOM, etc). main.js
@@ -107,27 +120,44 @@ export const PHASE = {
   JUDGING: "judging",
 };
 
+/** Cheap, synchronous, no-download check: does this JS engine have WASM at
+ * all? Unlike WebGPU there is no equivalent "looks present but doesn't
+ * actually work" failure mode worth probing for here - WebAssembly is a
+ * baseline, near-universal engine feature, not a capability that varies by
+ * GPU driver. This only exists to catch the genuinely ancient-browser case
+ * before downloading anything. */
+function wasmUsable() {
+  return typeof WebAssembly !== "undefined";
+}
+
 /** What the loader is about to fetch, without fetching it. `unsupported:
  * true` means this device cannot run the judge at all (see isWebGpuUsable) -
  * checked before anything is fetched, so an unsupported device never pays
  * for a download that is guaranteed to fail at model-init time. */
 export async function judgeInfo() {
-  if (!(await isWebGpuUsable())) {
-    return { isCached: false, downloadBytes: 0, device: "unsupported", dtype: DTYPE, unsupported: true };
+  if (await isWebGpuUsable()) {
+    try {
+      const info = await OpenJev.info({ model: MODEL, dtype: DTYPE, device: "webgpu" });
+      return {
+        isCached: Boolean(info.isCached),
+        downloadBytes: Number(info.downloadSize) || 0,
+        device: info.device,
+        dtype: info.dtype,
+        unsupported: false,
+      };
+    } catch {
+      // Not fatal: we can still try to load.
+      return { isCached: false, downloadBytes: 0, device: "unknown", dtype: DTYPE, unsupported: false };
+    }
   }
-  try {
-    const info = await OpenJev.info({ model: MODEL, dtype: DTYPE, device: "webgpu" });
-    return {
-      isCached: Boolean(info.isCached),
-      downloadBytes: Number(info.downloadSize) || 0,
-      device: info.device,
-      dtype: info.dtype,
-      unsupported: false,
-    };
-  } catch {
-    // Not fatal: we can still try to load.
-    return { isCached: false, downloadBytes: 0, device: "unknown", dtype: DTYPE, unsupported: false };
+  if (wasmUsable()) {
+    // Same model file either way; exact size isn't probed ahead of time for
+    // the WASM path (no Transformers.js cache-metadata API to ask here,
+    // unlike the WebGPU path's OpenJev.info()) - reporting the known q4
+    // download size directly instead of a network round trip just to ask.
+    return { isCached: false, downloadBytes: 323_000_000, device: "wasm", dtype: DTYPE, unsupported: false };
   }
+  return { isCached: false, downloadBytes: 0, device: "unsupported", dtype: DTYPE, unsupported: true };
 }
 
 /**
@@ -152,16 +182,22 @@ export function loadJudge({ onPhase } = {}) {
 
   loading = isWebGpuUsable()
     .then((usable) => {
-      if (!usable) {
-        // Checked BEFORE any download: there is no WASM fallback for this
-        // model (see the module comment), so there is nothing to gain by
-        // attempting the load and every download-then-crash is a waste of
-        // the player's data for a result we already know.
+      if (usable) return loadWithWebGpu(onPhase);
+      if (!wasmUsable()) {
+        // Checked before any download: neither backend exists here, so
+        // there is nothing to gain by attempting a load that cannot
+        // possibly succeed.
         throw new UnsupportedDeviceError(
           "This browser can't run today's judge. Try a recent version of Chrome, Edge, or Safari with WebGPU enabled.",
         );
       }
-      return loadWithWebGpu(onPhase);
+      return loadWithWasm(onPhase).catch((err) => {
+        console.error("[judge] WASM fallback failed after WebGPU was unusable:", err);
+        throw new UnsupportedDeviceError(
+          "This browser can't run today's judge. Try a recent version of Chrome, Edge, or Safari with WebGPU enabled.",
+          err,
+        );
+      });
     })
     .then((jev) => {
       instance = jev;
@@ -215,6 +251,17 @@ function loadWithWebGpu(onPhase) {
     // .message happens to say - this is what makes a production failure
     // diagnosable instead of just "today's judge could not load".
     console.error("[judge] OpenJev.load() failed after WebGPU was confirmed usable:", err);
+    throw err;
+  });
+}
+
+/** The WASM fallback, once WebGPU is confirmed unusable. Talks to
+ * onnxruntime-web's plain WASM bundle directly via judge-wasm.js, not
+ * through open-jev/Transformers.js's own loader - see the module comment
+ * for why that distinction is the entire reason this path works at all. */
+function loadWithWasm(onPhase) {
+  return loadJudgeWasm({ onPhase }).catch((err) => {
+    console.error("[judge] loadJudgeWasm() failed:", err);
     throw err;
   });
 }
