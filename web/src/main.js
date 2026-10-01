@@ -170,11 +170,14 @@ function renderAttempts() {
 
 // --- rendering: today's leaderboard ----------------------------------------
 //
-// Answer text for today's board only ever arrives from the server once this
-// player has completed all 3 attempts - see api.js/worker: the worker itself
-// omits `answer` from every row until the requesting player's own attempt
-// count reaches MAX_ATTEMPTS, so there is nothing to redact here client-side
-// and no answer text to accidentally render even by mistake.
+// Full attempt data (every attempt's answer AND individual score) for today's
+// board only ever arrives from the server once this player has completed all
+// 3 of their own attempts - see api.js/worker: the worker itself sends
+// `attempts: null` for every other row until the requesting player's own
+// attempt count reaches MAX_ATTEMPTS, so there is nothing to redact here
+// client-side and no attempt data to accidentally render even by mistake.
+// `entry.score` is always the player's average (the ranking score) and is
+// shown regardless of redaction.
 
 function todayRowNode(entry, rank) {
   const li = document.createElement("li");
@@ -190,11 +193,26 @@ function todayRowNode(entry, rank) {
   name.className = "row-name";
   name.textContent = entry.you ? `${entry.name} (you)` : entry.name;
   main.append(name);
-  if (entry.answer) {
-    const answer = document.createElement("div");
-    answer.className = "row-answer";
-    answer.textContent = entry.answer;
-    main.append(answer);
+
+  if (Array.isArray(entry.attempts)) {
+    const list = document.createElement("ol");
+    list.className = "row-attempts";
+    for (const attempt of entry.attempts) {
+      const item = document.createElement("li");
+      item.className = "row-attempt";
+      const label = document.createElement("span");
+      label.className = "row-attempt-label";
+      label.textContent = `${attempt.attemptNumber}.`;
+      const answer = document.createElement("span");
+      answer.className = "row-attempt-answer";
+      answer.textContent = attempt.answer;
+      const score = document.createElement("span");
+      score.className = "row-attempt-score";
+      score.textContent = formatScore(attempt.score);
+      item.append(label, answer, score);
+      list.append(item);
+    }
+    main.append(list);
   }
 
   const score = document.createElement("span");
@@ -364,6 +382,16 @@ function updateCounter() {
   el.counter.textContent = `${used} / ${MAX_ANSWER}`;
   el.counter.classList.toggle("near", used > MAX_ANSWER - 15);
 }
+
+/** Called only after an attempt is actually accepted (locally, or by the
+ * shared leaderboard) - never on a failed, invalid, or duplicate-rejected
+ * submission, so a player's in-progress typing is never silently discarded.
+ * The name field is deliberately left alone; only the answer and its counter
+ * reset, ready for the next attempt. */
+function clearAnswerInput() {
+  el.answer.value = "";
+  updateCounter();
+}
 el.answer.addEventListener("input", updateCounter);
 el.answer.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
@@ -450,6 +478,7 @@ el.play.addEventListener("submit", async (event) => {
         renderAttempts();
         if (response?.leaderboard) renderBoard(response.leaderboard);
         else await refreshBoard();
+        clearAnswerInput();
       } catch (err) {
         if (err.status === 409 && err.body?.error === "max_attempts") {
           try {
@@ -461,6 +490,12 @@ el.play.addEventListener("submit", async (event) => {
           }
           renderAttempts();
           showError("All 3 attempts are already used for today.");
+          // Rejected, not accepted: the input is left as-is (requirement 3).
+        } else if (err.status === 409 && err.body?.error === "duplicate_answer") {
+          // Rejected server-side, no attempt consumed: don't touch `attempts`
+          // or clear the input - the player should see and can edit what
+          // they just typed.
+          showError("You've already submitted that answer.");
         } else {
           // The score is real and shown locally; only the shared board failed.
           attempts = addLocalAttempt(challenge.id, localAttempt);
@@ -475,6 +510,7 @@ el.play.addEventListener("submit", async (event) => {
           renderLocalBoard();
           el.boardNote.hidden = false;
           el.boardNote.textContent = `Your score is saved on this device. ${err.message}`;
+          clearAnswerInput();
         }
       }
     } else {
@@ -488,6 +524,7 @@ el.play.addEventListener("submit", async (event) => {
         you: true,
       });
       renderLocalBoard();
+      clearAnswerInput();
     }
   } catch (err) {
     showError(err?.message || "Something went wrong scoring that. Try again.");

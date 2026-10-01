@@ -45,7 +45,7 @@ async function call(path, options = {}) {
   } catch {
     // Non-JSON body: treated as an error below.
   }
-  if (!response.ok && response.status !== 409) {
+  if (!response.ok) {
     const error = new Error(body?.message || `Leaderboard error (HTTP ${response.status}).`);
     error.status = response.status;
     error.body = body;

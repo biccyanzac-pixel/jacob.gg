@@ -41,6 +41,17 @@ CREATE TABLE IF NOT EXISTS submissions (
 CREATE UNIQUE INDEX IF NOT EXISTS submissions_player_challenge_attempt
   ON submissions (player_id, challenge_id, attempt_number);
 
+-- Duplicate-answer rejection (same player, same challenge, same normalized
+-- answer) is enforced in handlePlay() itself, checked before an attempt
+-- number is ever assigned - NOT as a database constraint here. Production
+-- already has pre-existing rows that would violate such a constraint (test
+-- traffic from before this rule existed), and this schema's own invariant is
+-- insert-only, never-delete - retroactively cleaning that data to add the
+-- constraint would mean deleting historical rows, which this file
+-- deliberately never does. The application-level check is still genuine
+-- server-side enforcement (the client's belief about whether it's a
+-- duplicate is never trusted); see handlePlay() in src/index.js.
+
 -- Leaderboard reads: best score per player for a challenge. See fetchBoard()
 -- in src/index.js for the query and the documented tie-break rule.
 CREATE INDEX IF NOT EXISTS submissions_board

@@ -143,6 +143,19 @@ try {
       `"${answerTexts[i]}" vs "${ANSWERS[i]}"`,
     );
 
+    const answerFieldAfter = await pageA.locator("#answer").inputValue();
+    const counterAfter = await pageA.locator("#counter").textContent().catch(() => "");
+    check(
+      `attempt ${i + 1}: the answer input is cleared after a successful submission`,
+      answerFieldAfter === "",
+      `got "${answerFieldAfter}"`,
+    );
+    check(
+      `attempt ${i + 1}: the character counter resets to 0 after a successful submission`,
+      /^0\s*\//.test(counterAfter ?? ""),
+      `got "${counterAfter}"`,
+    );
+
     if (WORKER_URL) {
       check(
         `attempt ${i + 1}: a real request was sent to the deployed Worker`,
@@ -243,7 +256,7 @@ try {
       boardRowNames.some((t) => t.includes(nameA)),
       JSON.stringify(boardRowNames),
     );
-    const boardRowAnswers = await pageB.locator(".row-answer").allTextContents();
+    const boardRowAnswers = await pageB.locator(".row-attempt-answer").allTextContents();
     check(
       "player B, having made zero attempts yet, does NOT see A's answer text",
       boardRowAnswers.length === 0,
@@ -257,13 +270,54 @@ try {
   check("second player gets a real per-attempt score", Number.isFinite(bScore) && bScore >= 0 && bScore <= 100);
 
   if (WORKER_URL) {
+    // --- duplicate-answer rejection, exact and case/whitespace variants ----
+    // Waits on the actual /api/play response rather than "#submit is no
+    // longer disabled" - that flag flips synchronously inside the same async
+    // handler that sets it, so polling for it can resolve before the click
+    // is even processed, before the request has been sent at all (the exact
+    // class of race 592b455 fixed for the normal 3-attempt flow above).
+    for (const dup of ["a password", "A PASSWORD", "  a password  ", "a   password"]) {
+      await pageB.fill("#answer", dup);
+      const [response] = await Promise.all([
+        pageB.waitForResponse((r) => r.url().includes("/api/play"), { timeout: 60000 }),
+        pageB.click("#submit"),
+      ]);
+      check(`duplicate answer "${dup}" request was rejected with 409`, response.status() === 409, `got ${response.status()}`);
+      await pageB.waitForTimeout(200); // let the response handler finish updating the DOM
+      const err = await pageB.locator("#error").textContent().catch(() => "");
+      check(
+        `duplicate answer "${dup}" is rejected with a clear message`,
+        /already submitted/i.test(err ?? ""),
+        `got "${err}"`,
+      );
+      const rowsAfterDup = await pageB.locator(".attempt-row").count();
+      check(
+        `rejected duplicate "${dup}" does not consume an attempt (still 1 row)`,
+        rowsAfterDup === 1,
+        `rows=${rowsAfterDup}`,
+      );
+      const fieldAfterDup = await pageB.locator("#answer").inputValue();
+      check(
+        `rejected duplicate "${dup}" does not clear the input`,
+        fieldAfterDup === dup,
+        `got "${fieldAfterDup}"`,
+      );
+    }
+  }
+
+  if (WORKER_URL) {
     await submitAndWait(pageB, nameB, "a dream", 2);
     await submitAndWait(pageB, nameB, "a trance", 3);
-    const boardRowAnswersAfter = await pageB.locator(".row-answer").allTextContents();
+    const boardRowAnswersAfter = await pageB.locator(".row-attempt-answer").allTextContents();
     check(
       "after B's own 3rd attempt, A's real answer text is now visible to B",
       boardRowAnswersAfter.some((t) => t.length > 0),
       JSON.stringify(boardRowAnswersAfter),
+    );
+    check(
+      "after completion, A's full 3-attempt breakdown (not just one answer) is visible to B",
+      boardRowAnswersAfter.length >= 3,
+      `${boardRowAnswersAfter.length} attempt-answer elements total across all rows`,
     );
   }
 

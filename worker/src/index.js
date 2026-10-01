@@ -250,16 +250,19 @@ async function fetchPlayerAttempts(env, challId, playerId) {
   return (results ?? []).map(attemptView);
 }
 
-function boardRow(row, rank, playerId, redact) {
+function boardRow(player, rank, playerId, redact) {
+  const isSelf = playerId != null && player.playerId === playerId;
+  // Redaction hides every OTHER player's full attempt list (both answer text
+  // and each individual score - an individual score alone can leak which
+  // interpretation was strong) until the viewer has used all 3 of their own
+  // attempts; see fetchBoard. The viewer's own row is never redacted. A past
+  // day's board is never redacted at all (isToday gates this upstream).
   return {
     rank,
-    name: row.display_name,
-    // Withheld entirely (not just hidden client-side) for today's board
-    // until the requesting player has used all 3 of their own attempts -
-    // see fetchBoard. A past day's board is never redacted.
-    answer: redact ? null : row.best_answer,
-    score: row.avg_score,
-    you: playerId != null && row.player_id === playerId,
+    name: player.name,
+    score: player.avgScore,
+    you: isSelf,
+    attempts: !redact || isSelf ? player.attempts : null,
   };
 }
 
@@ -267,52 +270,77 @@ function boardRow(row, rank, playerId, redact) {
  * The leaderboard: one row per player, ranked by the arithmetic mean of every
  * attempt they have submitted so far for this challenge (the "daily score" -
  * shared/challenges.js's averageScore, recomputed here independently). Each
- * row also carries that player's single best-scoring individual answer, as
- * the representative interpretation shown alongside their average.
+ * row carries that player's full attempt list (answer + individual score per
+ * attempt_number), not just a single representative answer - averaging 3
+ * distinct answers into one number and then showing just one of those
+ * answers next to it reads as "this answer scored this average", which it
+ * didn't; see the incident this was built to fix.
  *
  * Tie-break rule (documented here because it matters and is easy to get
  * silently inconsistent): ties on average score sort by the player's
- * *earliest* submission for this challenge, then by that submission's row id
- * as a final, fully deterministic tiebreak. Both are stable across repeated
- * reads - the same two tied players always come out in the same order.
+ * *earliest* submission for this challenge (attempt_number 1's timestamp),
+ * then by that submission's row id as a final, fully deterministic tiebreak.
+ * Both are stable across repeated reads - the same two tied players always
+ * come out in the same order.
  *
- * Answer-text redaction: for TODAY's challenge id, every row's answer is
- * withheld unless the requesting player (`playerId`) has themselves used all
- * MAX_ATTEMPTS attempts on today's riddle - so nobody can read a stronger
- * interpretation than their own before their own three attempts are spent.
- * A challenge id that is not today's (i.e. already closed) is never
- * redacted: the whole point of "yesterday's strongest interpretations" is
- * that those answers are visible normally.
+ * Redaction: for TODAY's challenge id, every row's attempt list is withheld
+ * (both answers and individual scores - the average score itself still
+ * shows, so ranking stays visible) unless the requesting player (`playerId`)
+ * has themselves used all MAX_ATTEMPTS attempts on today's riddle - so
+ * nobody can read a stronger interpretation, or even infer one from a bare
+ * high individual score, before their own three attempts are spent. A
+ * challenge id that is not today's (i.e. already closed) is never redacted:
+ * the whole point of "yesterday's strongest interpretations" is that those
+ * answers are visible normally.
  */
 async function fetchBoard(env, challId, playerId) {
   const { results } = await env.DB.prepare(
-    `SELECT player_id, display_name, original_answer AS best_answer, submitted_at, id,
-            AVG(score) OVER (PARTITION BY player_id) AS avg_score,
-            MIN(submitted_at) OVER (PARTITION BY player_id) AS first_submitted_at,
-            ROW_NUMBER() OVER (
-              PARTITION BY player_id
-              ORDER BY score DESC, submitted_at ASC, id ASC
-            ) AS rn
+    `SELECT player_id, display_name, attempt_number, original_answer, score, submitted_at, id
        FROM submissions
-      WHERE challenge_id = ?`,
+      WHERE challenge_id = ?
+      ORDER BY player_id, attempt_number ASC`,
   )
     .bind(challId)
     .all();
 
-  const perPlayer = (results ?? []).filter((r) => r.rn === 1);
+  const byPlayer = new Map();
+  for (const row of results ?? []) {
+    let p = byPlayer.get(row.player_id);
+    if (!p) {
+      p = { playerId: row.player_id, name: row.display_name, attempts: [] };
+      byPlayer.set(row.player_id, p);
+    }
+    // ORDER BY attempt_number ASC above guarantees this stays sorted and
+    // that the first row pushed is attempt_number 1 - the "earliest
+    // submission" the tie-break below relies on. A player can only ever have
+    // attempt_numbers 1..MAX_ATTEMPTS (the INSERT path assigns them
+    // sequentially and the unique index on (player_id, challenge_id,
+    // attempt_number) makes a duplicate or skipped number impossible), so
+    // this can never accumulate a fake or out-of-range third attempt.
+    p.attempts.push({ attemptNumber: row.attempt_number, answer: row.original_answer, score: row.score });
+    if (!p.firstSubmittedAt) {
+      p.firstSubmittedAt = row.submitted_at;
+      p.firstId = row.id;
+    }
+  }
+
+  const perPlayer = [...byPlayer.values()].map((p) => ({
+    ...p,
+    avgScore: p.attempts.reduce((sum, a) => sum + a.score, 0) / p.attempts.length,
+  }));
   perPlayer.sort(
     (a, b) =>
-      b.avg_score - a.avg_score ||
-      a.first_submitted_at.localeCompare(b.first_submitted_at) ||
-      String(a.id).localeCompare(String(b.id)),
+      b.avgScore - a.avgScore ||
+      a.firstSubmittedAt.localeCompare(b.firstSubmittedAt) ||
+      String(a.firstId).localeCompare(String(b.firstId)),
   );
 
   const isToday = challId === challengeIdForDay(todayKey());
   const viewerAttempts = isToday ? await countAttempts(env, challId, playerId) : MAX_ATTEMPTS;
   const redact = isToday && viewerAttempts < MAX_ATTEMPTS;
 
-  const top = perPlayer.slice(0, BOARD_SIZE).map((r, i) => boardRow(r, i + 1, playerId, redact));
-  const yourIndex = playerId ? perPlayer.findIndex((r) => r.player_id === playerId) : -1;
+  const top = perPlayer.slice(0, BOARD_SIZE).map((p, i) => boardRow(p, i + 1, playerId, redact));
+  const yourIndex = playerId ? perPlayer.findIndex((p) => p.playerId === playerId) : -1;
   const you =
     yourIndex >= BOARD_SIZE ? boardRow(perPlayer[yourIndex], yourIndex + 1, playerId, redact) : null;
 
@@ -404,6 +432,21 @@ async function handlePlay(request, env, ip) {
   }
 
   const model = typeof body.model === "string" && body.model ? body.model.slice(0, 120) : "unknown";
+
+  // A player cannot submit the same (normalized) answer twice for the same
+  // challenge - checked here, server-side, before an attempt number is ever
+  // assigned, so a rejected duplicate never consumes one of the player's 3
+  // attempts. Uses the same normalized_answer the player's other attempts
+  // were stored with, so case/whitespace differences that normalizeAnswer()
+  // already treats as the same answer are correctly caught as duplicates too.
+  const duplicate = await env.DB.prepare(
+    `SELECT 1 FROM submissions WHERE player_id = ? AND challenge_id = ? AND normalized_answer = ? LIMIT 1`,
+  )
+    .bind(playerId, expectedChallengeId, normalized)
+    .first();
+  if (duplicate) {
+    return fail("duplicate_answer", "You've already submitted that answer.", 409, env);
+  }
 
   // Assign the attempt number here, from an actual row count - never from
   // anything the client sent. Retried a few times against the unique
