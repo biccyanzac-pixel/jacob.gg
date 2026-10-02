@@ -53,6 +53,7 @@
 
 import { OpenJev, noul } from "open-jev";
 import { assertNoul, scoreFromNoul } from "@shared/challenges.js";
+import { canonicalizeForJudge } from "@shared/judge-canonicalize.js";
 import { loadJudgeWasm } from "./judge-wasm.js";
 
 // Smallest model open-jev ships. dtype is always explicit "q4" - never
@@ -279,6 +280,15 @@ export function judgeRuntime() {
  * does not read it as a prompt at all - it scores a fixed pair of options
  * ("no", "yes") against it.
  *
+ * `answer` is canonicalised (see @shared/judge-canonicalize.js) before it
+ * reaches the model - lowercase, whitespace, and whole-answer wrapping/
+ * trailing punctuation only, never wording - applied here so both the
+ * WebGPU and WASM paths always see identical input for the same answer,
+ * with no separate call needed at either call site. This is NOT the same
+ * normalisation used for duplicate-answer detection (shared/normalize.js) -
+ * what gets stored, displayed, and hashed is still the player's original
+ * text; only what the model sees is canonicalised.
+ *
  * Returns { noul, score, model, device, ms }. `score` is full precision
  * (noul * 100); nothing here rounds it.
  */
@@ -286,7 +296,7 @@ export async function scoreAnswer({ answer, statement }) {
   const jev = await loadJudge();
   const started = performance.now();
 
-  const [verdict] = await jev.decide(answer, [noul(statement)]);
+  const [verdict] = await jev.decide(canonicalizeForJudge(answer), [noul(statement)]);
 
   if (!verdict || verdict.type !== "noul") {
     throw new Error("The judge returned an unexpected answer type.");
