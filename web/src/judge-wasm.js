@@ -286,12 +286,34 @@ export async function loadJudgeWasm({ onPhase } = {}) {
   // ~375MB. Disabling them trades a little speed for a smaller, more
   // predictable memory footprint, which is the actual constraint on a
   // mobile device that just hit RangeError: Out of memory at this stage.
+  //
+  // graphOptimizationLevel defaults to "all" (confirmed in the installed
+  // onnxruntime-web build: ort.wasm.js's setSessionOptions reads
+  // sessionOptions.graphOptimizationLevel ?? "all"). Optimization passes
+  // (operator fusion, constant folding, layout transforms) build their own
+  // transformed copies of the graph as part of running - overhead this
+  // one-shot-per-load game gets no benefit from, since it never reuses the
+  // session for repeated inference.
+  //
+  // session.disable_prepacking is a real, documented native ONNX Runtime
+  // session config key (include/onnxruntime/core/session/onnxruntime_session_options_config_keys.h),
+  // forwarded to the native session options via the "extra" option
+  // (confirmed in ort.wasm.js: extra entries reach _OrtAddSessionConfigEntry).
+  // Prepacking repacks initializer weights into a layout optimized for
+  // repeated compute the first time a session runs - for exactly the kind of
+  // quantized kernels this model uses (MatMulNBits/GatherBlockQuantized),
+  // that is a plausible *third* full-size copy of the weight data, on top of
+  // the JS-side fetch buffer and the WASM-heap copy mountExternalData already
+  // requires (see the module comment). Disabling it trades a little inference
+  // speed - irrelevant for a single judge call - for not building that copy.
   const session = await stage("session-create", () =>
     ort.InferenceSession.create(modelBuf, {
       executionProviders: ["wasm"],
       externalData: [{ path: "model_q4.onnx_data", data: dataBuf }],
       enableCpuMemArena: false,
       enableMemPattern: false,
+      graphOptimizationLevel: "disabled",
+      extra: { session: { disable_prepacking: "1" } },
     }),
   );
 
