@@ -26,6 +26,15 @@ export default defineConfig({
     // The judge pulls in Transformers.js, which is large by nature. Raise the
     // warning limit rather than pretend the bundle is small.
     chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      // mem-test.html is a standalone, unlinked diagnostic page (not part of
+      // the game) for manually isolating onnxruntime-web + the q4 model from
+      // app code on a real device - see web/src/mem-test.js.
+      input: {
+        main: path.join(here, "index.html"),
+        "mem-test": path.join(here, "mem-test.html"),
+      },
+    },
   },
   worker: { format: "es" },
   optimizeDeps: {

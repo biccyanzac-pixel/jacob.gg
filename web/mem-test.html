@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>jacob.gg - judge memory test (isolated, no game code)</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+      button { font-size: 1.1rem; padding: 0.6rem 1.2rem; }
+      pre { white-space: pre-wrap; word-break: break-word; background: #111; color: #0f0; padding: 1rem; border-radius: 6px; font-size: 0.8rem; max-height: 70vh; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Judge memory test</h1>
+    <p>
+      Loads the exact production <code>kev-0.6b</code> q4 model through plain
+      <code>onnxruntime-web/wasm</code> directly - no game code, no tokenizer, no
+      Transformers.js. Isolates whether a real-device out-of-memory failure comes
+      from onnxruntime-web + this model, or from the app around it.
+    </p>
+    <button id="run">Run test</button>
+    <pre id="log"></pre>
+    <script type="module" src="/src/mem-test.js"></script>
+  </body>
+</html>

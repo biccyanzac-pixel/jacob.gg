@@ -156,7 +156,7 @@ export async function judgeInfo() {
     // the WASM path (no Transformers.js cache-metadata API to ask here,
     // unlike the WebGPU path's OpenJev.info()) - reporting the known q4
     // download size directly instead of a network round trip just to ask.
-    return { isCached: false, downloadBytes: 323_000_000, device: "wasm", dtype: DTYPE, unsupported: false };
+    return { isCached: false, downloadBytes: 374_822_912, device: "wasm", dtype: DTYPE, unsupported: false };
   }
   return { isCached: false, downloadBytes: 0, device: "unsupported", dtype: DTYPE, unsupported: true };
 }

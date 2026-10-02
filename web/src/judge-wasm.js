@@ -1,7 +1,8 @@
 /**
- * EXPERIMENTAL - not wired into production judge.js yet. See
- * web/scripts/kev-wasm-export/PART_A_AND_B_REPORT.md for the investigation
- * this implements: the exact production kev-0.6b q4 ONNX model (same file
+ * Wired into production judge.js as the WASM fallback when WebGPU is
+ * unusable. See web/scripts/kev-wasm-export/PART_A_AND_B_REPORT.md for the
+ * investigation this implements: the exact production kev-0.6b q4 ONNX
+ * model (same file
  * open-jev fetches, unmodified) genuinely runs through onnxruntime-web's
  * plain WASM bundle - but only when that bundle is loaded directly. Calling
  * open-jev/Transformers.js with device:"wasm" does NOT reach this bundle:
@@ -72,7 +73,7 @@ function buildInputs(tokenizer, stateText, instructionsText) {
  *
  * Writes directly into a single pre-sized output buffer instead of
  * collecting chunks in an array and concatenating afterward - for the
- * ~323MB external-data file, the chunks-then-concatenate pattern briefly
+ * ~375MB external-data file, the chunks-then-concatenate pattern briefly
  * held both the chunk array and the final buffer in memory at once (close
  * to double the file's size), which is exactly the kind of avoidable
  * overhead that contributed to a confirmed real-device
@@ -185,12 +186,25 @@ async function stage(name, fn) {
  * success either. Logged so a real failure's context is visible alongside
  * the actual error, rather than guessed at separately. */
 export function wasmCapabilitySnapshot() {
-  return {
+  const snapshot = {
     webAssembly: typeof WebAssembly !== "undefined",
     sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
     crossOriginIsolated: typeof self !== "undefined" ? Boolean(self.crossOriginIsolated) : null,
     userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
   };
+  // Neither is available everywhere - performance.memory is Chromium-only
+  // and non-standard, deviceMemory is Chromium-only and coarse-bucketed, and
+  // WebKit/Safari (the iOS case) exposes neither. Logged as context only:
+  // their absence proves nothing, but their presence is a real clue when a
+  // real-device OOM report comes in without devtools attached.
+  if (typeof navigator !== "undefined" && navigator.deviceMemory) {
+    snapshot.deviceMemoryGB = navigator.deviceMemory;
+  }
+  if (typeof performance !== "undefined" && performance.memory) {
+    snapshot.jsHeapUsedMB = Math.round(performance.memory.usedJSHeapSize / 1e6);
+    snapshot.jsHeapLimitMB = Math.round(performance.memory.jsHeapSizeLimit / 1e6);
+  }
+  return snapshot;
 }
 
 /** Load the exact production q4 model through onnxruntime-web's plain WASM
@@ -249,6 +263,12 @@ export async function loadJudgeWasm({ onPhase } = {}) {
   );
 
   onPhase?.({ phase: "initializing", progress: 1 });
+  console.error(
+    "[judge-wasm] download complete, about to call session-create. sizes:",
+    { modelBufBytes: modelBuf.byteLength, dataBufBytes: dataBuf.byteLength },
+    "memory:",
+    wasmCapabilitySnapshot(),
+  );
 
   // This is where onnxruntime-web actually fetches and instantiates the
   // WASM runtime binary itself (ort-wasm-simd-threaded.wasm) - everything
@@ -263,7 +283,7 @@ export async function loadJudgeWasm({ onPhase } = {}) {
   // buffers to reuse allocations across runs - both are peak-memory
   // optimizations for *repeated* inference, not relevant to this game's
   // one-shot-per-load usage, and both add overhead on top of the model's own
-  // ~323MB. Disabling them trades a little speed for a smaller, more
+  // ~375MB. Disabling them trades a little speed for a smaller, more
   // predictable memory footprint, which is the actual constraint on a
   // mobile device that just hit RangeError: Out of memory at this stage.
   const session = await stage("session-create", () =>
