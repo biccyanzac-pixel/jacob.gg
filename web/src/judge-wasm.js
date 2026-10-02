@@ -109,11 +109,15 @@ class WasmJev {
     if (!Array.isArray(questions) || questions.length !== 1 || questions[0]?.type !== "noul") {
       throw new Error("[judge-wasm] only a single noul() question is supported.");
     }
-    const { inputIds, optionPositions } = buildInputs(this.tokenizer, state, questions[0].instructions);
-    const results = await this.session.run({
-      input_ids: new ort.Tensor("int64", BigInt64Array.from(inputIds.map(BigInt)), [1, inputIds.length]),
-      attention_mask: new ort.Tensor("int64", BigInt64Array.from(inputIds.map(() => 1n)), [1, inputIds.length]),
-    });
+    const { inputIds, optionPositions } = await stage("input-construction", () =>
+      buildInputs(this.tokenizer, state, questions[0].instructions),
+    );
+    const results = await stage("inference", () =>
+      this.session.run({
+        input_ids: new ort.Tensor("int64", BigInt64Array.from(inputIds.map(BigInt)), [1, inputIds.length]),
+        attention_mask: new ort.Tensor("int64", BigInt64Array.from(inputIds.map(() => 1n)), [1, inputIds.length]),
+      }),
+    );
     const flat = results.logits.data;
     const optLogits = optionPositions.map((p) => Number(flat[p]));
     const max = Math.max(...optLogits);
@@ -130,12 +134,49 @@ class WasmJev {
   }
 }
 
+/** Thrown with a `stage` tag identifying exactly which step failed - a
+ * real-device WASM failure was previously indistinguishable from any other
+ * ("This device can't run today's judge" could mean anything from
+ * WebAssembly genuinely not existing to a session-creation OOM). The
+ * original error is always preserved as `.cause`. */
+export class WasmStageError extends Error {
+  constructor(stageName, cause) {
+    super(`[judge-wasm:${stageName}] ${cause?.message ?? cause}`);
+    this.name = "WasmStageError";
+    this.stage = stageName;
+    this.cause = cause;
+  }
+}
+
+async function stage(name, fn) {
+  try {
+    return await fn();
+  } catch (err) {
+    throw new WasmStageError(name, err);
+  }
+}
+
+/** Reports what can be checked cheaply, without proving anything on its
+ * own - SharedArrayBuffer/crossOriginIsolated absence does not necessarily
+ * break a `numThreads: 1` session, and its presence does not guarantee
+ * success either. Logged so a real failure's context is visible alongside
+ * the actual error, rather than guessed at separately. */
+export function wasmCapabilitySnapshot() {
+  return {
+    webAssembly: typeof WebAssembly !== "undefined",
+    sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+    crossOriginIsolated: typeof self !== "undefined" ? Boolean(self.crossOriginIsolated) : null,
+    userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+  };
+}
+
 /** Load the exact production q4 model through onnxruntime-web's plain WASM
  * bundle directly, bypassing open-jev/Transformers.js's own model loader
  * (which always resolves to the combined webgpu+wasm bundle - see the
  * module comment). `onPhase` matches judge.js's { phase, progress, loaded,
  * total } contract so the existing loading UI needs no changes. */
 export async function loadJudgeWasm({ onPhase } = {}) {
+  console.error("[judge-wasm] capability snapshot before attempting WASM load:", wasmCapabilitySnapshot());
   ort.env.wasm.numThreads = 1;
   // Resolving the plain WASM binary's own URL from a bundler-relative path
   // is exactly the fragile step that broke in local dev (Vite's dependency
@@ -157,7 +198,7 @@ export async function loadJudgeWasm({ onPhase } = {}) {
     }
   }
 
-  const tokenizer = await AutoTokenizer.from_pretrained(MODEL_REPO);
+  const tokenizer = await stage("tokenizer", () => AutoTokenizer.from_pretrained(MODEL_REPO));
 
   let graphLoaded = 0;
   let dataLoaded = 0;
@@ -169,25 +210,37 @@ export async function loadJudgeWasm({ onPhase } = {}) {
     if (total > 0) onPhase?.({ phase: "downloading", progress: Math.min(1, loaded / total), loaded, total });
   };
 
-  const [modelBuf, dataBuf] = await Promise.all([
-    fetchWithProgress(`${MODEL_BASE_URL}/onnx/model_q4.onnx`, (l, t) => {
-      graphLoaded = l;
-      graphTotal = t;
-      reportProgress();
-    }),
-    fetchWithProgress(`${MODEL_BASE_URL}/onnx/model_q4.onnx_data`, (l, t) => {
-      dataLoaded = l;
-      dataTotal = t;
-      reportProgress();
-    }),
-  ]);
+  const [modelBuf, dataBuf] = await stage("model-download", () =>
+    Promise.all([
+      fetchWithProgress(`${MODEL_BASE_URL}/onnx/model_q4.onnx`, (l, t) => {
+        graphLoaded = l;
+        graphTotal = t;
+        reportProgress();
+      }),
+      fetchWithProgress(`${MODEL_BASE_URL}/onnx/model_q4.onnx_data`, (l, t) => {
+        dataLoaded = l;
+        dataTotal = t;
+        reportProgress();
+      }),
+    ]),
+  );
 
   onPhase?.({ phase: "initializing", progress: 1 });
 
-  const session = await ort.InferenceSession.create(modelBuf, {
-    executionProviders: ["wasm"],
-    externalData: [{ path: "model_q4.onnx_data", data: dataBuf }],
-  });
+  // This is where onnxruntime-web actually fetches and instantiates the
+  // WASM runtime binary itself (ort-wasm-simd-threaded.wasm) - everything
+  // before this point only downloaded the model's own bytes. A failure
+  // here (WASM compile/instantiate, SIMD, memory, or the q4 operators
+  // themselves) happens AFTER the model download the player already saw
+  // complete - tagged "session-create" specifically so that distinction is
+  // visible in the error rather than looking identical to a download
+  // failure.
+  const session = await stage("session-create", () =>
+    ort.InferenceSession.create(modelBuf, {
+      executionProviders: ["wasm"],
+      externalData: [{ path: "model_q4.onnx_data", data: dataBuf }],
+    }),
+  );
 
   return new WasmJev({ session, tokenizer });
 }

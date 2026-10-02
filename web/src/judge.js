@@ -193,7 +193,12 @@ export function loadJudge({ onPhase } = {}) {
         );
       }
       return loadWithWasm(onPhase).catch((err) => {
-        console.error("[judge] WASM fallback failed after WebGPU was unusable:", err);
+        // err is a WasmStageError when it came from judge-wasm.js (has
+        // .stage identifying exactly which step failed) - logged in full,
+        // including the original .cause, regardless of what the player
+        // sees. See main.js's debug-mode handling for how this reaches a
+        // real device without devtools access.
+        console.error(`[judge] WASM fallback failed after WebGPU was unusable (stage: ${err?.stage ?? "unknown"}):`, err, err?.cause);
         throw new UnsupportedDeviceError(
           "This browser can't run today's judge. Try a recent version of Chrome, Edge, or Safari with WebGPU enabled.",
           err,

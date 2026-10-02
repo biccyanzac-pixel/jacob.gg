@@ -565,6 +565,26 @@ await refreshBoard();
 await renderYesterday(); // a different, already-closed riddle - safe to show any time
 startPolling();
 
+// Temporary diagnostic aid, not a permanent feature: ?debug=1 appends the
+// real underlying error (walking every .cause link, with each stage tag
+// where judge-wasm.js set one) to the on-screen failure note, so a real
+// device with no attached devtools (most phones) can still report back the
+// exact failure instead of just the generic friendly headline below. The
+// headline itself never changes - this only extends the note text, and
+// only when explicitly asked for via the URL.
+function describeErrorChain(err) {
+  const parts = [];
+  let current = err;
+  let depth = 0;
+  while (current && depth < 6) {
+    const tag = current.stage ? `[${current.stage}] ` : "";
+    parts.push(`${tag}${current.name ?? "Error"}: ${current.message ?? current}`);
+    current = current.cause;
+    depth += 1;
+  }
+  return parts.join(" <- caused by: ");
+}
+
 if (hasCompletedToday()) {
   // Already done for today: no reason to download a 365MB model just to show
   // a screen that says so.
@@ -582,8 +602,11 @@ if (hasCompletedToday()) {
       err instanceof UnsupportedDeviceError
         ? "This device can't run today's judge."
         : "Today's judge could not load.";
-    el.preparingNote.textContent =
-      err?.message ?? "Check your connection and refresh to try again.";
+    const friendlyNote = err?.message ?? "Check your connection and refresh to try again.";
+    const debugRequested = new URLSearchParams(location.search).get("debug") === "1";
+    el.preparingNote.textContent = debugRequested
+      ? `${friendlyNote}\n\nDEBUG: ${describeErrorChain(err)}`
+      : friendlyNote;
     el.preparingBar.style.width = "0%";
   }
 }
