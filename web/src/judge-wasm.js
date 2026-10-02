@@ -68,29 +68,52 @@ function buildInputs(tokenizer, stateText, instructionsText) {
   return { inputIds, optionPositions };
 }
 
-/** Fetch with byte-level progress, matching judge.js's onPhase contract. */
+/** Fetch with byte-level progress, matching judge.js's onPhase contract.
+ *
+ * Writes directly into a single pre-sized output buffer instead of
+ * collecting chunks in an array and concatenating afterward - for the
+ * ~323MB external-data file, the chunks-then-concatenate pattern briefly
+ * held both the chunk array and the final buffer in memory at once (close
+ * to double the file's size), which is exactly the kind of avoidable
+ * overhead that contributed to a confirmed real-device
+ * `RangeError: Out of memory` at the next stage (session-create). This
+ * still requires a trustworthy `content-length` header (true for both
+ * huggingface.co model files); if it's missing, falls back to the
+ * old collect-and-concatenate path rather than guessing a size. */
 async function fetchWithProgress(url, onBytes) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`[judge-wasm] fetch failed (${response.status}): ${url}`);
   const total = Number(response.headers.get("content-length")) || 0;
   if (!response.body || !onBytes) return new Uint8Array(await response.arrayBuffer());
   const reader = response.body.getReader();
-  const chunks = [];
-  let loaded = 0;
+  if (!total) {
+    const chunks = [];
+    let loaded = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      onBytes(loaded, total);
+    }
+    const out = new Uint8Array(loaded);
+    let offset = 0;
+    for (const chunk of chunks) {
+      out.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return out;
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
-    loaded += value.length;
-    onBytes(loaded, total);
+    out.set(value, offset);
+    offset += value.length;
+    onBytes(offset, total);
   }
-  const out = new Uint8Array(loaded);
-  let offset = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return out;
+  return offset === total ? out : out.subarray(0, offset);
 }
 
 class WasmJev {
@@ -235,10 +258,20 @@ export async function loadJudgeWasm({ onPhase } = {}) {
   // complete - tagged "session-create" specifically so that distinction is
   // visible in the error rather than looking identical to a download
   // failure.
+  // enableCpuMemArena/enableMemPattern default to true, which make ORT
+  // pre-reserve and keep growing a memory arena, and build extra bookkeeping
+  // buffers to reuse allocations across runs - both are peak-memory
+  // optimizations for *repeated* inference, not relevant to this game's
+  // one-shot-per-load usage, and both add overhead on top of the model's own
+  // ~323MB. Disabling them trades a little speed for a smaller, more
+  // predictable memory footprint, which is the actual constraint on a
+  // mobile device that just hit RangeError: Out of memory at this stage.
   const session = await stage("session-create", () =>
     ort.InferenceSession.create(modelBuf, {
       executionProviders: ["wasm"],
       externalData: [{ path: "model_q4.onnx_data", data: dataBuf }],
+      enableCpuMemArena: false,
+      enableMemPattern: false,
     }),
   );
 
