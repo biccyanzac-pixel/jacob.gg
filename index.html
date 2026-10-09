@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>jacob.gg</title>
-  <meta name="description" content="Daily games: ridd-le, Yogle and Predictle. New puzzles every day at 00:00 UTC.">
+  <meta name="description" content="Daily games: ridd-le, Yogle, Predictle and Pointle. New puzzles every day at 00:00 UTC.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314213d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23fbf7f0' text-anchor='middle'%3Ej%3C/text%3E%3C/svg%3E">
   <style>
     :root {
@@ -17,6 +17,7 @@
       --riddle-a: #1b1f3a; --riddle-b: #4b5bdc;
       --yoga-a: #ffb27a;   --yoga-b: #e8590c;
       --phys-a: #9be3d4;   --phys-b: #0f8f7a;
+      --point-a: #8fc7ff;  --point-b: #1c4f9c;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -56,6 +57,7 @@
     .riddle .art { background: radial-gradient(circle at 50% 45%, var(--riddle-b), var(--riddle-a) 70%); }
     .yoga .art   { background: linear-gradient(160deg, var(--yoga-a), var(--yoga-b)); }
     .phys .art   { background: linear-gradient(160deg, var(--phys-a), var(--phys-b)); }
+    .point .art  { background: radial-gradient(circle at 30% 20%, var(--point-a), var(--point-b) 75%); }
     .body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .body h2 { margin: 0; font: 700 1.5rem/1.2 Georgia, "Times New Roman", serif; }
     .body p { margin: 0; color: var(--muted); }
@@ -133,6 +135,24 @@
         <div class="body">
           <h2>Predictle</h2>
           <p>Two contraptions and a laser puzzle a day. Watch, it freezes, then tap where it will come to rest.</p>
+        </div>
+      </a>
+
+      <a class="card point" href="/pointle/">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <circle cx="160" cy="100" r="78" fill="#2f6fd0" stroke="#fff" stroke-width="4"/>
+            <path d="M104 62 c18 -10 36 4 52 -4 s30 -14 44 0 c10 10 -4 22 -18 22 s-30 12 -46 6 s-34 -8 -32 -24z
+                     M110 120 c14 -6 28 4 36 16 s-6 26 -20 22 s-28 -26 -16 -38z
+                     M190 118 c16 -6 30 6 28 20 s-20 18 -30 8 s-10 -24 2 -28z" fill="#57d9a3" opacity=".9"/>
+            <path d="M134 26 L190 176" stroke="#ffd166" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 10"/>
+            <circle cx="134" cy="26" r="9" fill="#ffd166"/>
+            <path d="M190 176 l-14 -6 m14 6 l4 -15" stroke="#ff7a7a" stroke-width="6" stroke-linecap="round" fill="none"/>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>Pointle</h2>
+          <p>Three places a day. Point your phone straight through the Earth at each one. Your location never leaves your device.</p>
         </div>
       </a>
     </div>

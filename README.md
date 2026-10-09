@@ -7,6 +7,7 @@ The hub page for the daily games: **https://biccyanzac-pixel.github.io/jacob.gg/
 | ridd-le | [biccyanzac-pixel/ridd-le](https://github.com/biccyanzac-pixel/ridd-le) | https://biccyanzac-pixel.github.io/ridd-le/ |
 | Yogle | [biccyanzac-pixel/yogle](https://github.com/biccyanzac-pixel/yogle) | https://biccyanzac-pixel.github.io/yogle/ |
 | Predictle | [biccyanzac-pixel/predictle](https://github.com/biccyanzac-pixel/predictle) | https://biccyanzac-pixel.github.io/predictle/ |
+| Pointle | [biccyanzac-pixel/pointle](https://github.com/biccyanzac-pixel/pointle) | https://biccyanzac-pixel.github.io/pointle/ |
 
 A single static `index.html`, served by GitHub Pages straight from `main`. To add a game, copy one of the `.card` blocks.
 
