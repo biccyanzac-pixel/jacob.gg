@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>jacob.gg</title>
+  <meta name="description" content="Daily games: ridd-le, Yogle and Predictle. A new puzzle every day at 00:00 UTC.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314213d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23fbf7f0' text-anchor='middle'%3Ej%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg: #fbf7f0;
+      --surface: #ffffff;
+      --ink: #14213d;
+      --muted: #55607a;
+      --border: #e6dfd2;
+      --shadow: 0 1px 0 rgba(20, 33, 61, .06), 0 12px 28px -18px rgba(20, 33, 61, .35);
+      --riddle-a: #1b1f3a; --riddle-b: #4b5bdc;
+      --yoga-a: #ffb27a;   --yoga-b: #e8590c;
+      --phys-a: #9be3d4;   --phys-b: #0f8f7a;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0f1424; --surface: #1a2135; --ink: #f4f1ea; --muted: #b6bed0; --border: #2c3550;
+        --shadow: 0 18px 40px -24px rgba(0, 0, 0, .8);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0f1424; --surface: #1a2135; --ink: #f4f1ea; --muted: #b6bed0; --border: #2c3550;
+      --shadow: 0 18px 40px -24px rgba(0, 0, 0, .8);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 1040px; margin: 0 auto; padding: 48px 16px 64px; }
+    header { text-align: center; margin-bottom: 40px; }
+    h1 {
+      font: 700 clamp(2.6rem, 8vw, 4rem)/1 Georgia, "Times New Roman", serif;
+      letter-spacing: -.02em; margin: 0 0 12px;
+    }
+    header p { margin: 0; color: var(--muted); font-size: 1.05rem; }
+    #clock { font-variant-numeric: tabular-nums; }
+
+    .grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .card {
+      display: flex; flex-direction: column; text-decoration: none; color: inherit;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+      overflow: hidden; box-shadow: var(--shadow);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    a.card:hover, a.card:focus-visible { transform: translateY(-4px) rotate(-.4deg); }
+    a.card:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    .art { aspect-ratio: 16 / 10; display: block; width: 100%; }
+    .art svg { display: block; width: 100%; height: 100%; }
+    .riddle .art { background: radial-gradient(circle at 50% 45%, var(--riddle-b), var(--riddle-a) 70%); }
+    .yoga .art   { background: linear-gradient(160deg, var(--yoga-a), var(--yoga-b)); }
+    .phys .art   { background: linear-gradient(160deg, var(--phys-a), var(--phys-b)); }
+    .body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .body h2 { margin: 0; font: 700 1.5rem/1.2 Georgia, "Times New Roman", serif; }
+    .body p { margin: 0; color: var(--muted); }
+    .tag {
+      align-self: flex-start; margin-top: 10px; font-size: .8rem; font-weight: 600;
+      padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
+    }
+    .soon { cursor: default; }
+    .soon .art { filter: saturate(.75); }
+    footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: .9rem; }
+    @media (prefers-reduced-motion: reduce) { .card { transition: none; } a.card:hover { transform: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>jacob.gg</h1>
+      <p>Little daily games. Everyone gets the same puzzle each day.<br>
+        Next puzzles in <span id="clock">--:--:--</span>.</p>
+    </header>
+
+    <div class="grid">
+      <a class="card riddle" href="/ridd-le/">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <g fill="#fff" opacity=".55">
+              <circle cx="40" cy="30" r="1.6"/><circle cx="280" cy="40" r="1.4"/><circle cx="250" cy="160" r="1.8"/>
+              <circle cx="70" cy="150" r="1.2"/><circle cx="210" cy="24" r="1.2"/><circle cx="110" cy="40" r="1"/>
+            </g>
+            <text x="160" y="140" text-anchor="middle" font-family="Georgia, serif" font-size="120"
+              font-weight="700" fill="#fff">?</text>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>ridd-le</h2>
+          <p>A riddle with no official answer. Pitch your best reading; an AI judge in your browser scores it.</p>
+        </div>
+      </a>
+
+      <a class="card yoga" href="/yogle/">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <circle cx="250" cy="50" r="22" fill="#fff6e8" opacity=".85"/>
+            <g stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <path d="M160 92 L160 140"/>
+              <path d="M160 140 L160 186"/>
+              <path d="M160 140 L188 160 L162 168"/>
+              <path d="M160 100 L136 70 L160 42"/>
+              <path d="M160 100 L184 70 L160 42"/>
+            </g>
+            <circle cx="160" cy="78" r="12" fill="#fff"/>
+            <path d="M40 188 H280" stroke="#fff" stroke-width="3" opacity=".6"/>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>Yogle</h2>
+          <p>A daily yoga pose. Hold it in front of your camera for 10 seconds. Video never leaves your device.</p>
+        </div>
+      </a>
+
+      <div class="card phys soon" aria-disabled="true">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <path d="M30 60 L150 104" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+            <path d="M290 112 L180 150" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="56" cy="56" r="13" fill="#ffd166"/>
+            <path d="M68 50 C120 30 170 70 186 120" stroke="#fff" stroke-width="2.5" stroke-dasharray="4 7" fill="none"/>
+            <g fill="none" stroke="#fff" stroke-width="5">
+              <path d="M70 160 v28 h40 v-28"/><path d="M130 160 v28 h40 v-28"/>
+            </g>
+            <path d="M232 168 l-4 -4 m8 0 l-4 4" stroke="#ffd166" stroke-width="3"/>
+            <path d="M232 174 v6" stroke="#ffd166" stroke-width="3"/>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>Predictle</h2>
+          <p>Three physics contraptions a day. Predict where the ball ends up, then watch it play out.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+      </div>
+    </div>
+
+    <footer>Free, no ads, no accounts. Puzzles change at 00:00 UTC.</footer>
+  </main>
+  <script>
+    // Countdown to the next 00:00 UTC, when every game switches day.
+    const clock = document.getElementById("clock");
+    function tick() {
+      const now = Date.now();
+      const next = Math.ceil((now + 1) / 864e5) * 864e5;
+      const s = Math.floor((next - now) / 1000);
+      const pad = n => String(n).padStart(2, "0");
+      clock.textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
