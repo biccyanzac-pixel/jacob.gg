@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>jacob.gg</title>
-  <meta name="description" content="Daily games: ridd-le, Yogle, Predictle and Pointle. New puzzles every day at 00:00 UTC.">
+  <meta name="description" content="Daily games: ridd-le, Yogle, Predictle, Pointle and Factle. New puzzles every day at 00:00 UTC.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314213d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23fbf7f0' text-anchor='middle'%3Ej%3C/text%3E%3C/svg%3E">
   <style>
     :root {
@@ -18,6 +18,7 @@
       --yoga-a: #ffb27a;   --yoga-b: #e8590c;
       --phys-a: #9be3d4;   --phys-b: #0f8f7a;
       --point-a: #8fc7ff;  --point-b: #1c4f9c;
+      --fact-a: #ffe08a;   --fact-b: #f4a62a;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -58,6 +59,7 @@
     .yoga .art   { background: linear-gradient(160deg, var(--yoga-a), var(--yoga-b)); }
     .phys .art   { background: linear-gradient(160deg, var(--phys-a), var(--phys-b)); }
     .point .art  { background: radial-gradient(circle at 30% 20%, var(--point-a), var(--point-b) 75%); }
+    .fact .art   { background: linear-gradient(160deg, var(--fact-a), var(--fact-b)); }
     .body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .body h2 { margin: 0; font: 700 1.5rem/1.2 Georgia, "Times New Roman", serif; }
     .body p { margin: 0; color: var(--muted); }
@@ -153,6 +155,27 @@
         <div class="body">
           <h2>Pointle</h2>
           <p>Three places a day. Point your phone straight through the Earth at each one. Your location never leaves your device.</p>
+        </div>
+      </a>
+
+      <a class="card fact" href="/factle/">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <g fill="#fff">
+              <rect x="56" y="34" width="168" height="16" rx="8" opacity=".9"/>
+              <rect x="56" y="64" width="140" height="16" rx="8" opacity=".9"/>
+              <rect x="56" y="94" width="176" height="16" rx="8" fill="#ff7a7a"/>
+              <rect x="56" y="124" width="150" height="16" rx="8" opacity=".9"/>
+              <rect x="56" y="154" width="120" height="16" rx="8" opacity=".9"/>
+            </g>
+            <path d="M48 102 H240" stroke="#7a1f1f" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="244" cy="96" r="30" fill="none" stroke="#14213d" stroke-width="9"/>
+            <path d="M266 118 L292 144" stroke="#14213d" stroke-width="12" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>Factle</h2>
+          <p>Five rounds of surprising Wikipedia facts. Four are true, one is fake. Spot the fake, fast.</p>
         </div>
       </a>
     </div>
