@@ -7,6 +7,9 @@
  *   JGG.levelChip(day)                 -> <span class="jgg-level"> element with that text
  *   JGG.rate({ game, day, mount })     -> renders "Rate today's <game>" into mount (an element). Call it when the
  *                                         day's game is finished. Safe to call repeatedly; keeps what was typed.
+ *   JGG.name() / JGG.setName(name)     -> the player's name, shared by every jacob.gg game (same origin, so one
+ *                                         localStorage). Games use it when they have no name of their own yet,
+ *                                         and call setName whenever the player sets or changes theirs.
  *
  * Ratings go to the hub worker (jacob.gg/worker). ?hub=<url> overrides it for local testing, ?hub=off disables.
  * Every call fails soft: if the hub is down, the widget says so and the game carries on.
@@ -195,5 +198,15 @@
       .catch(function () { /* the widget still works; sending will report any problem */ });
   }
 
-  window.JGG = { level: level, levelChip: levelChip, rate: rate, hubUrl: hubUrl, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
+  var NAME_KEY = 'jgg:name';
+  function name() {
+    try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; }
+  }
+  function setName(n) {
+    var v = String(n || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+    try { if (v) localStorage.setItem(NAME_KEY, v); else localStorage.removeItem(NAME_KEY); } catch (e) { /* private mode */ }
+    return v;
+  }
+
+  window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, hubUrl: hubUrl, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
 })();

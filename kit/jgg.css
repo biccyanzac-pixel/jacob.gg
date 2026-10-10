@@ -92,6 +92,18 @@ body {
   color: var(--accent);
 }
 
+/* "Playing as Jo · change": the small link-style button games put next to the shared name */
+.jgg-change {
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 /* --- weekday difficulty chip: <span class="jgg-level" data-level="6">Saturday · hardest</span> --- */
 
 .jgg-level {

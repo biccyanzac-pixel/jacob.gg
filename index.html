@@ -108,7 +108,8 @@
         <span class="level-text" id="level"></span>
         <ol class="week" id="week" aria-hidden="true"></ol>
         <span class="plays" id="plays" hidden><strong id="plays-today">0</strong> plays today ·
-          <strong id="plays-week">0</strong> this week</span>
+          <strong id="plays-week">0</strong> this week ·
+          <strong id="plays-all">0</strong> all time</span>
       </div>
     </header>
 
@@ -275,6 +276,7 @@
     fetch(HUB.replace(/\/+$/, "") + "/api/stats").then(r => r.ok ? r.json() : Promise.reject()).then(stats => {
       document.getElementById("plays-today").textContent = n(stats.plays.today);
       document.getElementById("plays-week").textContent = n(stats.plays.week);
+      document.getElementById("plays-all").textContent = n(stats.plays.all);
       document.getElementById("plays").hidden = false;
       const grid = document.querySelector(".grid");
       for (const g of stats.games) {
