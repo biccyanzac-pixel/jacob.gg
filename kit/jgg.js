@@ -200,7 +200,8 @@
 
   var NAME_KEY = 'jgg:name';
   function name() {
-    try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; }
+    // jgg.name: ridd-le's key from when it was the only jacob.gg game, so its players are already known
+    try { return localStorage.getItem(NAME_KEY) || localStorage.getItem('jgg.name') || ''; } catch (e) { return ''; }
   }
   function setName(n) {
     var v = String(n || '').replace(/\s+/g, ' ').trim().slice(0, 20);
