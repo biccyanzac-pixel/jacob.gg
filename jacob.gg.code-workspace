@@ -1,0 +1,42 @@
+{
+  "folders": [
+    {
+      "name": "jacob.gg (hub, kit, playbook)",
+      "path": "."
+    },
+    {
+      "name": "ridd-le",
+      "path": "../ridd-le"
+    },
+    {
+      "name": "Yogle",
+      "path": "../yogle"
+    },
+    {
+      "name": "Predictle",
+      "path": "../predictle"
+    },
+    {
+      "name": "Pointle",
+      "path": "../pointle"
+    },
+    {
+      "name": "Factle",
+      "path": "../factle"
+    },
+    {
+      "name": "Perceptle",
+      "path": "../perceptle"
+    },
+    {
+      "name": "Describle",
+      "path": "../describle"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.wrangler": true
+    }
+  }
+}

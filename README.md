@@ -1,5 +1,15 @@
 # jacob.gg
 
+**Working on the games (any computer):**
+
+```
+git clone https://github.com/biccyanzac-pixel/jacob.gg
+cd jacob.gg
+npm run setup        # clones every game next to this folder, installs the daily-games skill
+```
+
+Then open `jacob.gg.code-workspace` in VS Code, and read [PLAYBOOK.md](PLAYBOOK.md).
+
 The hub page for the daily games: **https://biccyanzac-pixel.github.io/jacob.gg/**
 
 | Game | Repo | Play |

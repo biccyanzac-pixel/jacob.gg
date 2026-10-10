@@ -3,11 +3,33 @@
 How every jacob.gg daily game is built, styled, deployed and connected to the hub. Read this before starting a new
 game or changing a shared part of an existing one. Each game's own `CLAUDE.md` holds its game-specific rules.
 
+## 0. Any computer: set up the workspace
+
+Every game is its own GitHub repo, and they all sit side by side in one folder, next to this one:
+
+```
+git clone https://github.com/biccyanzac-pixel/jacob.gg
+cd jacob.gg
+npm run setup              # add -- --install to also npm install everything
+```
+
+`npm run setup` clones every game in `games.json` next to `jacob.gg`, so `../perceptle` and `../factle` are there,
+just like on the owner's PC (where they live on the Desktop). Games that are already there get pulled, unless
+they have uncommitted work. It also sets the commit identity in each repo and installs the `daily-games` skill
+into `~/.claude/skills`, so a Claude session started in any game folder finds this playbook. Then open
+`jacob.gg.code-workspace` in VS Code to see the hub and every game in one window.
+
+Once per computer, for deploying: push access to `github.com/biccyanzac-pixel` (sign in to git or GitHub), and
+`npx wrangler login` for the Cloudflare workers and databases. No secrets live in the repos (the hub's admin
+password is a Cloudflare secret).
+
+Run `npm run setup` again any time to pick up new games and other people's commits.
+
 ## 1. Where things are
 
 | What | Where |
 | --- | --- |
-| Games (one folder and one GitHub repo each) | `C:\Users\jacobp\Desktop\<game>` → `github.com/biccyanzac-pixel/<game>` |
+| Games (one folder and one GitHub repo each) | `../<game>` next to this folder → `github.com/biccyanzac-pixel/<game>` |
 | Live games | `https://biccyanzac-pixel.github.io/<game>/` (GitHub Pages, `gh-pages` branch) |
 | Hub page | this repo, `index.html`, served from `main` at `https://biccyanzac-pixel.github.io/jacob.gg/` |
 | Shared kit (look + rating box) | this repo, `kit/jgg.css` and `kit/jgg.js` |
@@ -15,7 +37,8 @@ game or changing a shared part of an existing one. Each game's own `CLAUDE.md` h
 | Game list | this repo, `games.json` |
 | Leaderboard workers | each game's `worker/` → `https://<game>-leaderboard.jacob-gg-leaderboard-worker.workers.dev` |
 
-Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle. In progress: Describle.
+Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle. In development: Describle. All are listed in
+`games.json` (`games` = live, `inDevelopment` = not on the hub yet).
 
 Identity for every repo: `biccyanzac-pixel <285977456+biccyanzac-pixel@users.noreply.github.com>` (set it repo-locally).
 
@@ -144,8 +167,10 @@ Pick the next free pair for a new game and add it here.
 
 ## 8. Adding a new game: checklist
 
-1. New folder `Desktop/<game>`, new GitHub repo `biccyanzac-pixel/<game>`, repo-local commit identity, a short
-   `CLAUDE.md` (game rules, tests, ports, "see jacob.gg/PLAYBOOK.md").
+1. New folder `../<game>` next to `jacob.gg`, new GitHub repo `biccyanzac-pixel/<game>`, repo-local commit
+   identity, a short `CLAUDE.md` (game rules, tests, ports, "see ../jacob.gg/PLAYBOOK.md"). Add it to `games.json`
+   under `inDevelopment` (and to `jacob.gg.code-workspace`) so `npm run setup` clones it on other computers;
+   move it to `games` at launch.
 2. `site/` with the page skeleton from section 3 and components copied from Perceptle. Day number from an `EPOCH`,
    countdown, the weekday curve (section 2.3), share text, archive, the rating box.
 3. `worker/` from the pattern in section 5. Create the D1 (`npx wrangler d1 create <game>-leaderboard`), apply the
@@ -173,12 +198,13 @@ When a game is brought up to date, update this table.
 
 ## 10. Starting a new game in a new chat
 
-Open an empty folder `C:\Users\jacobp\Desktop\<game>` in a new window and start the prompt with:
+On any computer, open a folder (the one that holds `jacob.gg` and the games, or an empty one) and start with:
 
 ```
-New jacob.gg daily game. Use the daily-games skill and follow
-C:\Users\jacobp\Desktop\jacob.gg\PLAYBOOK.md exactly (house rules, kit,
-leaderboard worker, tests, deploy, hub registration, ports).
+New jacob.gg daily game. If ./jacob.gg or ../jacob.gg isn't here, first run:
+git clone https://github.com/biccyanzac-pixel/jacob.gg && cd jacob.gg && npm run setup
+Then use the daily-games skill and follow jacob.gg/PLAYBOOK.md exactly
+(house rules, kit, leaderboard worker, tests, deploy, hub registration, ports).
 Copy the page structure and components from ../perceptle or ../factle so it
 looks like the others. Register it on the hub (games.json, card, hub worker
 sources, kit NAMES) as the very last step, after checking git status in
@@ -188,3 +214,6 @@ Game name: <name>
 Idea: <how a round works, how scoring works>
 Weekday curve: <what makes Monday easy and Saturday hard, what Sunday's special is>
 ```
+
+To change an existing game, the same opening works with `Task: <what to change in which game>` instead of the
+game idea.

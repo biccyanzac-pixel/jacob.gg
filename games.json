@@ -1,12 +1,15 @@
 {
-  "about": "The live jacob.gg daily games. Read by the hub page (index.html) and the hub worker (worker/). Add a game here, in worker/src/sources.js and as a card in index.html. See PLAYBOOK.md.",
+  "about": "The jacob.gg daily games. `games` are live: read by the hub page (index.html) and the hub worker (worker/). `inDevelopment` are not on the hub yet. `npm run setup` clones all of them next to this folder. Add a game here, in worker/src/sources.js and as a card in index.html. See PLAYBOOK.md.",
   "levels": ["Sunday special", "Easiest", "Easy", "Medium", "Harder", "Hard", "Hardest"],
   "games": [
-    { "id": "ridd-le",   "name": "ridd-le",   "path": "/ridd-le/",   "repo": "biccyanzac-pixel/ridd-le" },
-    { "id": "yogle",     "name": "Yogle",     "path": "/yogle/",     "repo": "biccyanzac-pixel/yogle" },
+    { "id": "ridd-le", "name": "ridd-le", "path": "/ridd-le/", "repo": "biccyanzac-pixel/ridd-le" },
+    { "id": "yogle", "name": "Yogle", "path": "/yogle/", "repo": "biccyanzac-pixel/yogle" },
     { "id": "predictle", "name": "Predictle", "path": "/predictle/", "repo": "biccyanzac-pixel/predictle" },
-    { "id": "pointle",   "name": "Pointle",   "path": "/pointle/",   "repo": "biccyanzac-pixel/pointle" },
-    { "id": "factle",    "name": "Factle",    "path": "/factle/",    "repo": "biccyanzac-pixel/factle" },
+    { "id": "pointle", "name": "Pointle", "path": "/pointle/", "repo": "biccyanzac-pixel/pointle" },
+    { "id": "factle", "name": "Factle", "path": "/factle/", "repo": "biccyanzac-pixel/factle" },
     { "id": "perceptle", "name": "Perceptle", "path": "/perceptle/", "repo": "biccyanzac-pixel/perceptle" }
+  ],
+  "inDevelopment": [
+    { "id": "describle", "name": "Describle", "repo": "biccyanzac-pixel/describle" }
   ]
 }

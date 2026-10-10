@@ -3,6 +3,7 @@
 This repo is the hub for all the daily games: the hub page (`index.html`), the shared kit every game loads
 (`kit/`), the hub worker for plays, ratings and admin (`worker/`), the game list (`games.json`), and
 **PLAYBOOK.md**, the house rules and how-to for every game. Read PLAYBOOK.md first.
+The games live next to this folder (`../<game>`); `npm run setup` clones any that are missing.
 
 Critical rules:
 - `kit/jgg.css` and `kit/jgg.js` are live in every game as soon as `main` is pushed. Keep changes backwards

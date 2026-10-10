@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "node tools/setup.mjs",
     "serve": "node tools/serve.mjs 8083",
     "test:ui": "node tools/ui-check.mjs"
   },
