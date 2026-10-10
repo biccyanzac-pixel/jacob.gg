@@ -30,8 +30,10 @@ Every game follows these unless the owner agrees an exception.
 3. **Weekday difficulty curve.** Monday is the easiest, getting harder through to Saturday, the hardest. Sunday is
    a **special**: a twist, or the hardest day of all. Show it on the intro with `JGG.levelChip(day)`. The hub shows
    the same curve.
-4. **Name once, then auto-submit.** Ask for a name the first time, either before playing or at the end, and
-   remember it. After that, every finished game goes on the leaderboard with no button. A failed send shows the
+4. **One name, then auto-submit.** The name is shared by every game: read `JGG.name()` when the game has none
+   of its own, call `JGG.setName(n)` whenever the player sets or changes it, and show "Playing as Jo · change"
+   (`JGG.playingAs(...)`, or the game's own equivalent). Only ask for a name if none is known yet, either
+   before playing or at the end. After that, every finished game goes on the leaderboard with no button. A failed send shows the
    error and a retry. Games with retries (Yogle, ridd-le) submit every finished try. The board ranks the player's
    best (or, in ridd-le, the average of their 3) and shows "best of N".
 5. **Leaderboard**: today's board is always visible. Ties go to whoever finished first. Archive replays go on a
@@ -76,6 +78,8 @@ Every game page starts like this, with the kit loaded **before** the game's own 
 JGG.levelChip(day)                      // <span class="jgg-level"> "Saturday · hardest"; use it on the intro
 JGG.level(day)                          // { weekday, level (0 = Sunday), label, text }
 JGG.rate({ game: 'factle', day, mount }) // the rating box, into an element on the results screen; call it on every render
+JGG.name() / JGG.setName(n)             // the player's name, shared by every game (falls back to ridd-le's old key)
+JGG.playingAs({ mount, name, onChange }) // "Playing as Jo · change" with an inline editor
 ```
 
 Use `window.JGG?.rate(...)` so a game still works if the kit fails to load. For local tests, `?hub=<url>` points
@@ -155,14 +159,32 @@ Pick the next free pair for a new game and add it here.
 
 ## 9. Kit status per game
 
-| Game | Kit look | Level chip | Rating box | Auto-submit | Weekday curve |
-| --- | --- | --- | --- | --- | --- |
-| Factle | yes | yes | yes | yes (name before play) | yes; Sunday hardest for days after 2026-10-23 |
-| Pointle | yes | yes | yes | yes (once named) | yes; Sunday mix |
-| Yogle | yes | yes | yes | yes (once named, every try) | yes; Sunday hardest |
-| Perceptle | not yet | – | – | yes (name before play) | yes; Sunday illusion special |
-| Predictle | not yet | – | – | – | – |
-| ridd-le | not yet | – | – | – | no curve yet |
-| Describle | not yet (in development) | – | – | – | – |
+| Game | Kit look | Level chip | Rating box | Shared name + change | Auto-submit | Weekday curve |
+| --- | --- | --- | --- | --- | --- | --- |
+| Factle | yes | yes | yes | yes | yes (name before play) | yes; Sunday hardest for days after 2026-10-23 |
+| Pointle | yes | yes | yes | yes | yes (once named) | yes; Sunday mix |
+| Yogle | yes | yes | yes | yes | yes (once named, every try) | yes; Sunday hardest |
+| Perceptle | yes | yes | yes (on-time days) | yes | yes (name before play) | yes; Sunday illusion special |
+| Predictle | yes | yes | yes | yes | yes | yes; Sunday toughest |
+| ridd-le | yes | no (no curve) | yes | yes (until the first attempt) | yes (every attempt) | no curve yet |
+| Describle | not yet (in development) | – | – | – | – | – |
 
 When a game is brought up to date, update this table.
+
+## 10. Starting a new game in a new chat
+
+Open an empty folder `C:\Users\jacobp\Desktop\<game>` in a new window and start the prompt with:
+
+```
+New jacob.gg daily game. Use the daily-games skill and follow
+C:\Users\jacobp\Desktop\jacob.gg\PLAYBOOK.md exactly (house rules, kit,
+leaderboard worker, tests, deploy, hub registration, ports).
+Copy the page structure and components from ../perceptle or ../factle so it
+looks like the others. Register it on the hub (games.json, card, hub worker
+sources, kit NAMES) as the very last step, after checking git status in
+../jacob.gg, because other agents may be editing it.
+
+Game name: <name>
+Idea: <how a round works, how scoring works>
+Weekday curve: <what makes Monday easy and Saturday hard, what Sunday's special is>
+```
