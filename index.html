@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>jacob.gg</title>
-  <meta name="description" content="Daily games: ridd-le, Yogle, Predictle, Pointle and Factle. New puzzles every day at 00:00 UTC.">
+  <meta name="description" content="Daily games: ridd-le, Yogle, Predictle, Pointle, Factle and Perceptle. New puzzles every day at 00:00 UTC.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314213d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23fbf7f0' text-anchor='middle'%3Ej%3C/text%3E%3C/svg%3E">
   <style>
     :root {
@@ -19,6 +19,7 @@
       --phys-a: #9be3d4;   --phys-b: #0f8f7a;
       --point-a: #8fc7ff;  --point-b: #1c4f9c;
       --fact-a: #ffe08a;   --fact-b: #f4a62a;
+      --eye-a: #d9b8ff;    --eye-b: #6a3fc8;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -60,6 +61,7 @@
     .phys .art   { background: linear-gradient(160deg, var(--phys-a), var(--phys-b)); }
     .point .art  { background: radial-gradient(circle at 30% 20%, var(--point-a), var(--point-b) 75%); }
     .fact .art   { background: linear-gradient(160deg, var(--fact-a), var(--fact-b)); }
+    .eye .art    { background: radial-gradient(circle at 70% 25%, var(--eye-a), var(--eye-b) 80%); }
     .body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .body h2 { margin: 0; font: 700 1.5rem/1.2 Georgia, "Times New Roman", serif; }
     .body p { margin: 0; color: var(--muted); }
@@ -176,6 +178,27 @@
         <div class="body">
           <h2>Factle</h2>
           <p>Five rounds of surprising Wikipedia facts. Four are true, one is fake. Spot the fake, fast.</p>
+        </div>
+      </a>
+      <a class="card eye" href="/perceptle/">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <path d="M60 100 Q160 22 260 100 Q160 178 60 100 Z" fill="#fff" opacity=".92"/>
+            <circle cx="160" cy="100" r="34" fill="#6a3fc8"/>
+            <g fill="#fff">
+              <circle cx="148" cy="88" r="4"/><circle cx="168" cy="84" r="3"/><circle cx="176" cy="104" r="4"/>
+              <circle cx="156" cy="112" r="3"/><circle cx="140" cy="104" r="2.5"/><circle cx="166" cy="120" r="2.5"/>
+            </g>
+            <path d="M40 176 L120 176" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+            <path d="M40 176 L96 140" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+            <path d="M70 176 A30 30 0 0 0 65 160" stroke="#ffd166" stroke-width="4" fill="none"/>
+            <circle cx="262" cy="162" r="16" fill="none" stroke="#fff" stroke-width="4"/>
+            <circle cx="262" cy="162" r="4" fill="#ffd166"/>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>Perceptle</h2>
+          <p>The daily perception olympics. Five quick estimation tasks: count, angles, areas, timing and more. Just eyes and instinct.</p>
         </div>
       </a>
     </div>
