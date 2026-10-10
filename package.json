@@ -1,0 +1,12 @@
+{
+  "name": "jacob-gg-hub",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node tools/serve.mjs 8083",
+    "test:ui": "node tools/ui-check.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.0"
+  }
+}

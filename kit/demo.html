@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>jacob.gg kit demo</title>
+    <meta name="color-scheme" content="dark light" />
+    <!-- A new game's page starts like this: the kit first, then the game's own stylesheet and scripts. -->
+    <link rel="stylesheet" href="jgg.css" />
+    <style>
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.5rem; }
+      .eyebrow { margin: 0; font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+      h1 { margin: .4rem 0 0; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.2; letter-spacing: -.02em; }
+      .levels { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin: 1rem 0 0; padding: 0; list-style: none; font-size: .85rem; color: var(--muted); }
+    </style>
+    <script src="jgg.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <a class="wordmark" href="https://biccyanzac-pixel.github.io/jacob.gg/">jacob<span>.gg</span></a>
+      </header>
+      <section class="card">
+        <p class="eyebrow" id="level"></p>
+        <h1>Kit demo</h1>
+        <p>This is what the shared kit gives every game: colours, font, masthead, the weekday level and the rating box.</p>
+        <ul class="levels" id="levels"></ul>
+        <div id="rate"></div>
+      </section>
+    </main>
+    <script type="module">
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('level').append(JGG.levelChip(today));
+      const week = ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'];
+      document.getElementById('levels').append(...week.map((d) => { const li = document.createElement('li'); li.append(JGG.levelChip(d)); return li; }));
+      const game = new URLSearchParams(location.search).get('game') || 'perceptle';
+      JGG.rate({ game, day: today, mount: document.getElementById('rate') });
+    </script>
+  </body>
+</html>

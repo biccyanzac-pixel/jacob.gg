@@ -6,6 +6,7 @@
   <title>jacob.gg</title>
   <meta name="description" content="Daily games: ridd-le, Yogle, Predictle, Pointle, Factle and Perceptle. New puzzles every day at 00:00 UTC.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314213d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23fbf7f0' text-anchor='middle'%3Ej%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="kit/jgg.css">
   <style>
     :root {
       --bg: #fbf7f0;
@@ -34,7 +35,7 @@
     * { box-sizing: border-box; }
     body {
       margin: 0; background: var(--bg); color: var(--ink);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font: 16px/1.5 var(--jgg-font);
     }
     main { max-width: 1040px; margin: 0 auto; padding: 48px 16px 64px; }
     header { text-align: center; margin-bottom: 40px; }
@@ -44,6 +45,28 @@
     }
     header p { margin: 0; color: var(--muted); font-size: 1.05rem; }
     #clock { font-variant-numeric: tabular-nums; }
+
+    .today {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 18px;
+      margin: 22px auto 0; padding: 10px 18px; width: fit-content; max-width: 100%;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow);
+      font-size: .95rem;
+    }
+    .today[hidden] { display: none; }
+    .level-text { font-weight: 650; }
+    .week { display: flex; align-items: flex-end; gap: 4px; height: 26px; margin: 0; padding: 0; list-style: none; }
+    .week li {
+      width: 14px; border-radius: 3px 3px 1px 1px; background: var(--border); position: relative;
+      height: calc(6px + var(--h) * 3.3px);
+    }
+    .week li.now { background: var(--ink); }
+    .week li.sun { height: 20px; background: none; color: var(--muted); font-size: 15px; line-height: 20px; text-align: center; }
+    .week li.sun.now { color: var(--ink); }
+    .week li.sun::before { content: "✦"; }
+    .plays { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .plays strong { color: var(--ink); }
+    .meta { margin-top: 8px !important; font-size: .85rem; font-variant-numeric: tabular-nums; }
+    .meta .star { color: #e09b00; }
 
     .grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
     .card {
@@ -81,10 +104,16 @@
       <h1>jacob.gg</h1>
       <p>Little daily games. Everyone gets the same puzzle each day.<br>
         Next puzzles in <span id="clock">--:--:--</span>.</p>
+      <div class="today" id="today">
+        <span class="level-text" id="level"></span>
+        <ol class="week" id="week" aria-hidden="true"></ol>
+        <span class="plays" id="plays" hidden><strong id="plays-today">0</strong> plays today ·
+          <strong id="plays-week">0</strong> this week</span>
+      </div>
     </header>
 
     <div class="grid">
-      <a class="card riddle" href="/ridd-le/">
+      <a class="card riddle" data-game="ridd-le" href="/ridd-le/">
         <span class="art" aria-hidden="true">
           <svg viewBox="0 0 320 200">
             <g fill="#fff" opacity=".55">
@@ -101,7 +130,7 @@
         </div>
       </a>
 
-      <a class="card yoga" href="/yogle/">
+      <a class="card yoga" data-game="yogle" href="/yogle/">
         <span class="art" aria-hidden="true">
           <svg viewBox="0 0 320 200">
             <circle cx="250" cy="50" r="22" fill="#fff6e8" opacity=".85"/>
@@ -122,7 +151,7 @@
         </div>
       </a>
 
-      <a class="card phys" href="/predictle/">
+      <a class="card phys" data-game="predictle" href="/predictle/">
         <span class="art" aria-hidden="true">
           <svg viewBox="0 0 320 200">
             <path d="M30 60 L150 104" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
@@ -142,7 +171,7 @@
         </div>
       </a>
 
-      <a class="card point" href="/pointle/">
+      <a class="card point" data-game="pointle" href="/pointle/">
         <span class="art" aria-hidden="true">
           <svg viewBox="0 0 320 200">
             <circle cx="160" cy="100" r="78" fill="#2f6fd0" stroke="#fff" stroke-width="4"/>
@@ -160,7 +189,7 @@
         </div>
       </a>
 
-      <a class="card fact" href="/factle/">
+      <a class="card fact" data-game="factle" href="/factle/">
         <span class="art" aria-hidden="true">
           <svg viewBox="0 0 320 200">
             <g fill="#fff">
@@ -180,7 +209,7 @@
           <p>Five rounds of surprising Wikipedia facts. Four are true, one is fake. Spot the fake, fast.</p>
         </div>
       </a>
-      <a class="card eye" href="/perceptle/">
+      <a class="card eye" data-game="perceptle" href="/perceptle/">
         <span class="art" aria-hidden="true">
           <svg viewBox="0 0 320 200">
             <path d="M60 100 Q160 22 260 100 Q160 178 60 100 Z" fill="#fff" opacity=".92"/>
@@ -217,6 +246,53 @@
     }
     tick();
     setInterval(tick, 1000);
+
+    // Today's place in the weekly difficulty curve (the house rule in PLAYBOOK.md): Monday easiest,
+    // rising to Saturday, Sunday a special. Updates itself at 00:00 UTC.
+    const LEVELS = ["Sunday special: a twist on every game", "Monday: the easiest day", "Tuesday: easy", "Wednesday: medium",
+      "Thursday: getting harder", "Friday: hard", "Saturday: the hardest day"];
+    let shownDay = null;
+    function showLevel() {
+      const now = new Date(), day = now.toISOString().slice(0, 10);
+      if (day === shownDay) return;
+      shownDay = day;
+      const w = now.getUTCDay();
+      document.getElementById("level").textContent = LEVELS[w];
+      document.getElementById("week").replaceChildren(...[1, 2, 3, 4, 5, 6, 0].map(d => {
+        const li = document.createElement("li");
+        li.style.setProperty("--h", d);
+        li.className = (d === 0 ? "sun" : "") + (d === w ? " now" : "");
+        return li;
+      }));
+    }
+    showLevel();
+    setInterval(showLevel, 1000);
+
+    // Plays and ratings from the hub worker (jacob.gg/worker). Cards are ordered by its combined rank
+    // (half plays, half rating); without it the page keeps the order above.
+    const HUB = new URLSearchParams(location.search).get("hub") || "https://jgg-hub.jacob-gg-leaderboard-worker.workers.dev";
+    const n = v => new Intl.NumberFormat("en", { notation: v >= 10000 ? "compact" : "standard" }).format(v);
+    fetch(HUB.replace(/\/+$/, "") + "/api/stats").then(r => r.ok ? r.json() : Promise.reject()).then(stats => {
+      document.getElementById("plays-today").textContent = n(stats.plays.today);
+      document.getElementById("plays-week").textContent = n(stats.plays.week);
+      document.getElementById("plays").hidden = false;
+      const grid = document.querySelector(".grid");
+      for (const g of stats.games) {
+        const card = grid.querySelector(`[data-game="${g.id}"]`);
+        if (!card) continue;
+        const meta = document.createElement("p");
+        meta.className = "meta";
+        meta.append(`${n(g.plays.all)} play${g.plays.all === 1 ? "" : "s"}`);
+        if (g.rating.votes) {
+          const star = document.createElement("span");
+          star.className = "star";
+          star.textContent = "★";
+          meta.append(" · ", star, ` ${g.rating.avg.toFixed(1)} (${n(g.rating.votes)})`);
+        }
+        card.querySelector(".body").append(meta);
+        grid.append(card);
+      }
+    }).catch(() => { /* the page works without stats */ });
   </script>
 </body>
 </html>

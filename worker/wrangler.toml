@@ -1,0 +1,48 @@
+name = "jgg-hub"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# Sync plays from the games' leaderboards, then recompute the hub stats.
+[triggers]
+crons = ["*/10 * * * *"]
+
+# The hub's own database: plays, ratings, stats.
+[[d1_databases]]
+binding = "DB"
+database_name = "jgg-hub"
+database_id = "f348daf3-656f-4b4b-8a61-8a7949072d81"
+
+# Each game's leaderboard. Only ever read (SELECT in src/sources.js); the games' own workers write them.
+[[d1_databases]]
+binding = "DB_RIDDLE"
+database_name = "jacob-gg-leaderboard"
+database_id = "f43847da-3fcb-4f58-a78c-438c4ff17c01"
+
+[[d1_databases]]
+binding = "DB_YOGLE"
+database_name = "yogle-leaderboard"
+database_id = "8d19f1c4-0cde-4b05-be50-9d6347d75451"
+
+[[d1_databases]]
+binding = "DB_PREDICTLE"
+database_name = "predictle-leaderboard"
+database_id = "c3b9e867-b731-4cf1-b3ec-e309ceb7b48e"
+
+[[d1_databases]]
+binding = "DB_POINTLE"
+database_name = "pointle-leaderboard"
+database_id = "59271571-329b-46b8-8b98-6eec63e07bdb"
+
+[[d1_databases]]
+binding = "DB_FACTLE"
+database_name = "factle-leaderboard"
+database_id = "f7c5659f-cddb-4dd4-b445-25f265d42957"
+
+[[d1_databases]]
+binding = "DB_PERCEPTLE"
+database_name = "perceptle-leaderboard"
+database_id = "d1477fe6-3dc4-47e2-9648-3f81c806d211"
+
+[vars]
+ALLOWED_ORIGINS = "https://biccyanzac-pixel.github.io"
+# ADMIN_PASSWORD is a secret: npx wrangler secret put ADMIN_PASSWORD

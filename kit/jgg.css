@@ -1,0 +1,227 @@
+/*
+ * jacob.gg shared kit: the house look for every daily game.
+ * Load it FIRST, before the game's own stylesheet:
+ *   <link rel="stylesheet" href="https://biccyanzac-pixel.github.io/jacob.gg/kit/jgg.css">
+ * A game may override any token after it (usually just --accent), but should not redefine the base.
+ * Changing a token or the font here changes every game at once, so check a couple of games after editing.
+ */
+
+:root {
+  color-scheme: dark light;
+
+  --jgg-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --jgg-star: #ffc94a;
+
+  --bg: #0b0c10;
+  --bg-glow: #15171f;
+  --surface: #14161d;
+  --surface-2: #1b1e27;
+  --border: #272b36;
+  --text: #edeef2;
+  --muted: #9aa0ae;
+  --accent: #7c8cff;
+  --accent-soft: #232842;
+  --good: #57d9a3;
+  --bad: #ff7a7a;
+  --warn: #f2b84b;
+  --radius: 16px;
+  --shadow: 0 18px 40px -24px rgb(0 0 0 / 0.8);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --jgg-star: #e09b00;
+
+    --bg: #f6f7fb;
+    --bg-glow: #e9ebf6;
+    --surface: #ffffff;
+    --surface-2: #f2f3f8;
+    --border: #e0e3ee;
+    --text: #15171f;
+    --muted: #61687a;
+    --accent: #4b5bdc;
+    --accent-soft: #e8ebff;
+    --good: #1f9d6b;
+    --bad: #c93f3f;
+    --warn: #b7791f;
+    --shadow: 0 18px 40px -28px rgb(20 22 40 / 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 500px at 50% -10%, var(--bg-glow), transparent 70%),
+    var(--bg);
+  color: var(--text);
+  font: 400 16px/1.55 var(--jgg-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  width: 100%;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 3rem 16px 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Every game's page starts with:
+   <header class="masthead"><a class="wordmark" href="https://biccyanzac-pixel.github.io/jacob.gg/">jacob<span>.gg</span></a></header> */
+.masthead {
+  text-align: center;
+  position: relative;
+}
+
+.wordmark {
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.wordmark span {
+  color: var(--accent);
+}
+
+/* --- weekday difficulty chip: <span class="jgg-level" data-level="6">Saturday · hardest</span> --- */
+
+.jgg-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.jgg-level::before {
+  content: "";
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--good), var(--bad) calc(var(--jgg-level-mix, 50) * 1%));
+}
+
+.jgg-level[data-level="1"] { --jgg-level-mix: 0; }
+.jgg-level[data-level="2"] { --jgg-level-mix: 20; }
+.jgg-level[data-level="3"] { --jgg-level-mix: 40; }
+.jgg-level[data-level="4"] { --jgg-level-mix: 60; }
+.jgg-level[data-level="5"] { --jgg-level-mix: 80; }
+.jgg-level[data-level="6"] { --jgg-level-mix: 100; }
+.jgg-level[data-level="0"]::before { background: var(--jgg-star); }
+
+/* --- rating widget (kit/jgg.js: JGG.rate) --- */
+
+.jgg-rate {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  text-align: left;
+}
+
+.jgg-rate-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.jgg-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.jgg-stars {
+  position: relative;
+  display: inline-block;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: 8px;
+  padding: 0 2px;
+}
+
+.jgg-stars:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.jgg-stars-bg {
+  color: var(--border);
+}
+
+.jgg-stars-fg {
+  position: absolute;
+  inset: 0 auto 0 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--jgg-star);
+  pointer-events: none;
+}
+
+.jgg-stars-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  min-width: 3.5em;
+}
+
+.jgg-rate textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  resize: vertical;
+}
+
+.jgg-rate textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.jgg-rate-send {
+  align-self: flex-start;
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-weight: 650;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.jgg-rate-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.jgg-rate-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* The rest of a game's components (cards, buttons, leaderboard rows) currently live in each game's own CSS.
+   Perceptle's site/css/style.css is the reference copy for new games. */

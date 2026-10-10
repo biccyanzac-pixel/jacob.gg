@@ -1,0 +1,20 @@
+{
+  "name": "jgg-hub-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:local": "wrangler dev --local --port 8831 --test-scheduled --var ALLOWED_ORIGINS:http://localhost:8083 --var ADMIN_PASSWORD:test",
+    "db:init:local": "wrangler d1 execute jgg-hub --local --file=schema.sql",
+    "db:seed:local": "wrangler d1 execute jgg-hub --local --file=schema.sql && wrangler d1 execute perceptle-leaderboard --local --file=test/seed-perceptle.sql && wrangler d1 execute yogle-leaderboard --local --file=test/seed-yogle.sql",
+    "db:init": "wrangler d1 execute jgg-hub --remote --file=schema.sql",
+    "test": "node test/e2e.mjs http://127.0.0.1:8831",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261006.1": true
+  }
+}
