@@ -76,8 +76,9 @@
   }
 
   var fmt = function (v) { return v === null ? '–' : (v % 1 ? v.toFixed(1) : String(v)) + ' ★'; };
-  var avgText = function (d) {
-    return d && d.votes ? 'Average today: ' + d.avg.toFixed(1) + ' ★ from ' + d.votes + (d.votes === 1 ? ' rating.' : ' ratings.') : '';
+  var avgText = function (d, isToday) {
+    return d && d.votes ? (isToday ? 'Average today: ' : 'Average for this day: ') + d.avg.toFixed(1) + ' ★ from ' + d.votes
+      + (d.votes === 1 ? ' rating.' : ' ratings.') : '';
   };
 
   function rate(opts) {
@@ -88,8 +89,10 @@
     mount.dataset.jggRate = key;
 
     var chosen = null, saved = null;
+    var isToday = day === new Date().toISOString().slice(0, 10);
+    var dayName = new Date(day + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
     var box = el('div', 'jgg-rate');
-    var title = el('p', 'jgg-rate-title', 'Rate today’s ' + (NAMES[game] || game));
+    var title = el('p', 'jgg-rate-title', isToday ? 'Rate today’s ' + (NAMES[game] || game) : 'Rate ' + (NAMES[game] || game) + ' for ' + dayName);
     var stars = el('span', 'jgg-stars');
     var bg = el('span', 'jgg-stars-bg', '★★★★★');
     var fg = el('span', 'jgg-stars-fg', '★★★★★');
@@ -163,7 +166,7 @@
         .then(function (r) {
           saved = r.mine;
           send.textContent = 'Update rating';
-          note.textContent = 'Thanks! ' + avgText(r.day);
+          note.textContent = 'Thanks! ' + avgText(r.day, isToday);
         })
         .catch(function (e) {
           send.disabled = false;
@@ -184,9 +187,9 @@
           if (!msg.value) msg.value = r.mine.message || '';
           send.textContent = 'Update rating';
           send.disabled = true;
-          note.textContent = 'You rated this ' + fmt(saved.stars) + '. ' + avgText(r.day);
+          note.textContent = 'You rated this ' + fmt(saved.stars) + '. ' + avgText(r.day, isToday);
         } else if (r.day && r.day.votes) {
-          note.textContent = avgText(r.day);
+          note.textContent = avgText(r.day, isToday);
         }
       })
       .catch(function () { /* the widget still works; sending will report any problem */ });

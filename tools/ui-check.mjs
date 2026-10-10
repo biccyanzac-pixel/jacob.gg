@@ -25,7 +25,8 @@ for (const [name, viewport, scheme] of [['phone-dark', { width: 360, height: 800
   check(`${name}: level line`, /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/.test(await page.textContent('#level')));
   check(`${name}: week strip marks today`, (await page.locator('#week li.now').count()) === 1 && (await page.locator('#week li').count()) === 7);
   const order = await page.locator('.grid .card').evaluateAll((cs) => cs.map((c) => c.dataset.game));
-  check(`${name}: cards in rank order`, order[0] === 'perceptle', order.join(','));
+  const ranked = (await (await fetch(`${HUB}/api/stats`)).json()).games.map((g) => g.id);
+  check(`${name}: cards in the hub's rank order`, order.join(',') === ranked.join(','), order.join(','));
   check(`${name}: card meta`, /plays?/.test(await page.locator('[data-game="perceptle"] .meta').textContent()));
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(`${name}: no horizontal scroll`, !overflow);
