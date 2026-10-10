@@ -92,6 +92,9 @@
       align-self: flex-start; margin-top: 10px; font-size: .8rem; font-weight: 600;
       padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
     }
+    .tag.note { margin-top: 8px; color: #9a5b00; border-color: #f0d6a8; background: #fff7e8; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tag.note { color: #ffcf7a; border-color: #5a4520; background: #2a2214; } }
+    :root[data-theme="dark"] .tag.note { color: #ffcf7a; border-color: #5a4520; background: #2a2214; }
     .soon { cursor: default; }
     .soon .art { filter: saturate(.75); }
     footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: .9rem; }
@@ -128,6 +131,7 @@
         <div class="body">
           <h2>ridd-le</h2>
           <p>A riddle with no official answer. Pitch your best reading; an AI judge in your browser scores it.</p>
+          <span class="tag note" title="The AI judge runs in your browser and needs WebGPU, which many iPhones and iPads don't have yet.">⚠️ May not work on iPhone or iPad</span>
         </div>
       </a>
 
