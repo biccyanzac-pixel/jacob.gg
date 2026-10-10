@@ -10,6 +10,8 @@
  *   JGG.name() / JGG.setName(name)     -> the player's name, shared by every jacob.gg game (same origin, so one
  *                                         localStorage). Games use it when they have no name of their own yet,
  *                                         and call setName whenever the player sets or changes theirs.
+ *   JGG.playingAs({ mount, name, onChange }) -> "Playing as Jo · change" with an inline editor, for games that
+ *                                         only ask for a name at the end. onChange(newName) after Save.
  *
  * Ratings go to the hub worker (jacob.gg/worker). ?hub=<url> overrides it for local testing, ?hub=off disables.
  * Every call fails soft: if the hub is down, the widget says so and the game carries on.
@@ -209,5 +211,37 @@
     return v;
   }
 
-  window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, hubUrl: hubUrl, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
+  function playingAs(opts) {
+    var mount = opts.mount;
+    if (!mount) return;
+    var current = opts.name || '';
+    function view() {
+      if (!current) { mount.replaceChildren(); mount.hidden = true; return; }
+      mount.hidden = false;
+      var who = el('b', '', current), change = el('button', 'jgg-change', 'change');
+      change.type = 'button';
+      change.addEventListener('click', edit);
+      mount.replaceChildren('Playing as ', who, ' · ', change);
+    }
+    function edit() {
+      var input = el('input', 'jgg-name-input'), save = el('button', 'jgg-change', 'Save'), cancel = el('button', 'jgg-change', 'cancel');
+      input.value = current; input.maxLength = 20; input.autocomplete = 'nickname'; input.setAttribute('aria-label', 'Your name');
+      save.type = cancel.type = 'button';
+      function commit() {
+        var v = input.value.replace(/\s+/g, ' ').trim().slice(0, 20);
+        if (!v) { input.focus(); return; }
+        current = setName(v);
+        if (opts.onChange) opts.onChange(current);
+        view();
+      }
+      save.addEventListener('click', commit);
+      cancel.addEventListener('click', view);
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') view(); });
+      mount.replaceChildren('Playing as ', input, ' ', save, ' · ', cancel);
+      input.focus(); input.select();
+    }
+    view();
+  }
+
+  window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, playingAs: playingAs, hubUrl: hubUrl, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
 })();

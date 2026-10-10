@@ -104,6 +104,17 @@ body {
   cursor: pointer;
 }
 
+.jgg-name-input {
+  width: 11em;
+  max-width: 60%;
+  padding: 0.2rem 0.45rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
 /* --- weekday difficulty chip: <span class="jgg-level" data-level="6">Saturday · hardest</span> --- */
 
 .jgg-level {
