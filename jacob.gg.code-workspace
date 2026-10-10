@@ -29,6 +29,10 @@
       "path": "../perceptle"
     },
     {
+      "name": "Stratle",
+      "path": "../stratle"
+    },
+    {
       "name": "Describle",
       "path": "../describle"
     }

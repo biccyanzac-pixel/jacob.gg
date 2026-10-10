@@ -18,4 +18,5 @@ export const SOURCES = {
   pointle:     { binding: 'DB_POINTLE',   sql: q('results', 'submitted_at') },
   factle:      { binding: 'DB_FACTLE',    sql: q('totals', 'last_at') },   // one row per player per day, made at the first pick
   perceptle:   { binding: 'DB_PERCEPTLE', sql: q('totals', 'last_at') },
+  stratle:     { binding: 'DB_STRATLE',   sql: q('totals', 'last_at') },     // one row per player per day, made at the first answer
 };

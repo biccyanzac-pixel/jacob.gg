@@ -23,7 +23,7 @@
   var WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   // The house difficulty curve (see PLAYBOOK.md): Monday easiest, rising to Saturday; Sunday is a special.
   var LEVELS = ['Sunday special', 'Easiest', 'Easy', 'Medium', 'Harder', 'Hard', 'Hardest'];
-  var NAMES = { 'ridd-le': 'ridd-le', yogle: 'Yogle', predictle: 'Predictle', pointle: 'Pointle', factle: 'Factle', perceptle: 'Perceptle', describle: 'Describle' };
+  var NAMES = { 'ridd-le': 'ridd-le', yogle: 'Yogle', predictle: 'Predictle', pointle: 'Pointle', factle: 'Factle', perceptle: 'Perceptle', describle: 'Describle', stratle: 'Stratle' };
 
   function hubUrl() {
     try {

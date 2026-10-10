@@ -43,6 +43,11 @@ binding = "DB_PERCEPTLE"
 database_name = "perceptle-leaderboard"
 database_id = "d1477fe6-3dc4-47e2-9648-3f81c806d211"
 
+[[d1_databases]]
+binding = "DB_STRATLE"
+database_name = "stratle-leaderboard"
+database_id = "6b07417a-dc89-4a74-9b19-d42cbb0e6c2a"
+
 [vars]
 ALLOWED_ORIGINS = "https://biccyanzac-pixel.github.io"
 # ADMIN_PASSWORD is a secret: npx wrangler secret put ADMIN_PASSWORD

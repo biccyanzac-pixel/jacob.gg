@@ -37,7 +37,7 @@ Run `npm run setup` again any time to pick up new games and other people's commi
 | Game list | this repo, `games.json` |
 | Leaderboard workers | each game's `worker/` → `https://<game>-leaderboard.jacob-gg-leaderboard-worker.workers.dev` |
 
-Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle. In development: Describle. All are listed in
+Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle, Stratle. In development: Describle. All are listed in
 `games.json` (`games` = live, `inDevelopment` = not on the hub yet).
 
 Identity for every repo: `biccyanzac-pixel <285977456+biccyanzac-pixel@users.noreply.github.com>` (set it repo-locally).
@@ -137,7 +137,7 @@ Cloudflare Worker + D1, free plan, the same shape in every game (copy `perceptle
   decided by the server's clock.
 - `ALLOWED_ORIGINS = "https://biccyanzac-pixel.github.io"`; local dev adds `http://localhost:<site port>`.
 - If the worker bundles site files (generators, schedules), redeploy the worker whenever they change.
-- Free-plan limits to respect: D1 allows 10 databases per account (7 are in use: six games and the hub), 5M rows
+- Free-plan limits to respect: D1 allows 10 databases per account (8 are in use: seven games and the hub), 5M rows
   read per day, and 50 queries per Worker invocation. Keep running totals rather than scanning every row.
 
 ## 6. Deploying
@@ -158,6 +158,7 @@ Cloudflare Worker + D1, free plan, the same shape in every game (copy `perceptle
 | Pointle | 8080 | 8799 |
 | Factle | 8081 | 8811 |
 | Perceptle | 8082 | 8821 |
+| Stratle | 8084 | 8841 |
 | Describle | 8082 | 8812 |
 | Predictle | 8090 | 8798 |
 | ridd-le | 5173 (Vite dev), 4173 (preview) | 8787 |
@@ -192,6 +193,7 @@ Pick the next free pair for a new game and add it here.
 | Perceptle | yes | yes | yes (on-time days) | yes | yes (name before play) | yes; Sunday illusion special |
 | Predictle | yes | yes | yes | yes | yes | yes; Sunday toughest |
 | ridd-le | yes | no (no curve) | yes | yes (until the first attempt) | yes (every attempt) | no curve yet |
+| Stratle | yes | yes | yes | yes | yes (name before play) | yes; crowd deepens Mon to Sun, Sunday deepest |
 | Describle | not yet (in development) | – | – | – | – | – |
 
 When a game is brought up to date, update this table.

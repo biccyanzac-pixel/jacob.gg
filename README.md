@@ -20,6 +20,7 @@ The hub page for the daily games: **https://biccyanzac-pixel.github.io/jacob.gg/
 | Pointle | [biccyanzac-pixel/pointle](https://github.com/biccyanzac-pixel/pointle) | https://biccyanzac-pixel.github.io/pointle/ |
 | Factle | [biccyanzac-pixel/factle](https://github.com/biccyanzac-pixel/factle) | https://biccyanzac-pixel.github.io/factle/ |
 | Perceptle | [biccyanzac-pixel/perceptle](https://github.com/biccyanzac-pixel/perceptle) | https://biccyanzac-pixel.github.io/perceptle/ |
+| Stratle | [biccyanzac-pixel/stratle](https://github.com/biccyanzac-pixel/stratle) | https://biccyanzac-pixel.github.io/stratle/ |
 
 The hub page is a static `index.html`, served by GitHub Pages straight from `main`. It shows today's weekday
 difficulty, plays today and this week, and each game's plays and stars. Cards are ordered by plays and rating.
