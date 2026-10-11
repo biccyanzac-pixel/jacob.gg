@@ -8,9 +8,8 @@
     { "id": "pointle", "name": "Pointle", "path": "/pointle/", "repo": "biccyanzac-pixel/pointle" },
     { "id": "factle", "name": "Factle", "path": "/factle/", "repo": "biccyanzac-pixel/factle" },
     { "id": "perceptle", "name": "Perceptle", "path": "/perceptle/", "repo": "biccyanzac-pixel/perceptle" },
-    { "id": "stratle",   "name": "Stratle",   "path": "/stratle/",   "repo": "biccyanzac-pixel/stratle" }
+    { "id": "stratle",   "name": "Stratle",   "path": "/stratle/",   "repo": "biccyanzac-pixel/stratle" },
+    { "id": "describle", "name": "Describle", "path": "/describle/", "repo": "biccyanzac-pixel/describle" }
   ],
-  "inDevelopment": [
-    { "id": "describle", "name": "Describle", "repo": "biccyanzac-pixel/describle" }
-  ]
+  "inDevelopment": []
 }
