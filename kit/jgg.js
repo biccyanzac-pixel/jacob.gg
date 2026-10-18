@@ -12,6 +12,9 @@
  *                                         and call setName whenever the player sets or changes theirs.
  *   JGG.playingAs({ mount, name, onChange }) -> "Playing as Jo · change" with an inline editor, for games that
  *                                         only ask for a name at the end. onChange(newName) after Save.
+ *   JGG.motion.enter(el) / exit(el) / swap(from, to) / reveal(els) / settle(el, to, opts) / reduced()
+ *                                      -> the shared transitions (docs/motion-system.md). enter/exit toggle the
+ *                                         hidden attribute; all return promises; reduce motion gets a short fade.
  *
  * Ratings go to the hub worker (jacob.gg/worker). ?hub=<url> overrides it for local testing, ?hub=off disables.
  * Every call fails soft: if the hub is down, the widget says so and the game carries on.
@@ -243,5 +246,98 @@
     view();
   }
 
-  window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, playingAs: playingAs, hubUrl: hubUrl, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
+  // --- motion (docs/motion-system.md): the same curves and durations as the --jgg-* tokens in jgg.css ---
+  var EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
+  var T = { exit: 160, enter: 220, reveal: 320, settle: 700, stagger: 50 };
+  var FROM = {
+    enter: 'translateY(6px) scale(0.98)',
+    reveal: 'translateY(10px) scale(0.96)',
+    exit: 'translateY(-4px) scale(0.98)',
+  };
+
+  function reduced() {
+    try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+  }
+
+  // Runs one of the named transitions on el. Reduce motion turns every one into a short fade.
+  // Starting a new one cancels the last on the same element, so rapid phase changes never stack up.
+  function play(el, kind, delay) {
+    if (!el || !el.animate) return Promise.resolve();
+    if (el._jggAnim) el._jggAnim.cancel();
+    var calm = reduced(), out = kind === 'exit';
+    var a = { opacity: out ? 1 : 0 }, b = { opacity: out ? 0 : 1 };
+    if (!calm) {
+      a.transform = out ? 'none' : FROM[kind];
+      b.transform = out ? FROM.exit : 'none';
+    }
+    var anim = el.animate([a, b], {
+      duration: calm ? T.exit : T[kind],
+      delay: calm ? 0 : delay || 0,
+      easing: calm ? 'ease' : EASE_OUT,
+      fill: out ? 'forwards' : 'backwards',
+    });
+    el._jggAnim = anim;
+    return anim.finished.then(function () { return true; }, function () { return false; });
+  }
+
+  // Unhide el (the hidden attribute) and play "enter".
+  function enter(el, opts) {
+    if (!el) return Promise.resolve();
+    el.hidden = false;
+    return play(el, (opts && opts.kind) || 'enter', opts && opts.delay);
+  }
+
+  // Play "exit", then hide el. Resolves false if another transition on el interrupted it (that one wins).
+  function exit(el) {
+    if (!el || el.hidden) return Promise.resolve(true);
+    return play(el, 'exit').then(function (done) {
+      if (!done) return false;
+      el.hidden = true;
+      el._jggAnim.cancel(); // drop the held opacity: 0 so the element is normal when it is shown again
+      el._jggAnim = null;
+      return true;
+    });
+  }
+
+  // Phase change: the old screen leaves, then the new one arrives. If a newer swap brings the old
+  // screen back mid-exit, this one stops, so two phases are never shown together.
+  function swap(from, to) {
+    return exit(from).then(function (done) { return done ? enter(to) : undefined; });
+  }
+
+  // An answer or a set of results: each element in turn, 50 ms apart.
+  function reveal(els, opts) {
+    var list = els && els.length !== undefined ? Array.prototype.slice.call(els) : [els];
+    var gap = opts && opts.stagger !== undefined ? opts.stagger : T.stagger;
+    return Promise.all(list.map(function (el, i) { return enter(el, { kind: 'reveal', delay: i * gap }); }));
+  }
+
+  // A score counting up to its final value. The final text is in the DOM (aria-label) from the start,
+  // so screen readers and reduce motion get the number at once.
+  function settle(el, to, opts) {
+    if (!el) return Promise.resolve();
+    opts = opts || {};
+    var from = opts.from || 0, format = opts.format || function (v) { return String(Math.round(v)); };
+    var final = format(to);
+    if (el._jggSettle) cancelAnimationFrame(el._jggSettle);
+    if (reduced() || !window.requestAnimationFrame || from === to) { el.textContent = final; return Promise.resolve(); }
+    var ms = opts.duration || T.settle, start = null;
+    el.setAttribute('aria-label', final);
+    return new Promise(function (resolve) {
+      function frame(now) {
+        if (start === null) start = now;
+        var t = Math.min(1, (now - start) / ms), eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = t < 1 ? format(from + (to - from) * eased) : final;
+        if (t < 1) { el._jggSettle = requestAnimationFrame(frame); return; }
+        el._jggSettle = null;
+        el.removeAttribute('aria-label');
+        resolve();
+      }
+      el._jggSettle = requestAnimationFrame(frame);
+    });
+  }
+
+  var motion = { reduced: reduced, enter: enter, exit: exit, swap: swap, reveal: reveal, settle: settle };
+
+  window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, playingAs: playingAs, hubUrl: hubUrl, motion: motion, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
 })();

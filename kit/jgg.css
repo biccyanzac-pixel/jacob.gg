@@ -26,6 +26,18 @@
   --warn: #f2b84b;
   --radius: 16px;
   --shadow: 0 18px 40px -24px rgb(0 0 0 / 0.8);
+
+  /* Motion: one set of curves and durations for every game (docs/motion-system.md). */
+  --jgg-ease-out: cubic-bezier(0.23, 1, 0.32, 1);      /* enter, exit, reveal, press: starts fast */
+  --jgg-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);  /* something moving or morphing on screen */
+  --jgg-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);   /* sheets and drawers */
+  --jgg-t-press: 120ms;   /* :active feedback on buttons, tiles, cards */
+  --jgg-t-hover: 150ms;   /* colour and border changes */
+  --jgg-t-exit: 160ms;    /* leaving is quicker than arriving */
+  --jgg-t-enter: 220ms;   /* a panel, row or phase appearing */
+  --jgg-t-reveal: 320ms;  /* an answer or result being revealed (rare, so it can take a beat) */
+  --jgg-t-settle: 700ms;  /* a score counting up to its final value */
+  --jgg-stagger: 50ms;    /* between items in a revealed group */
 }
 
 @media (prefers-color-scheme: light) {
@@ -52,9 +64,19 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%; /* no font inflation in landscape on iOS */
+}
+
+/* No 300 ms double-tap wait on controls. */
+button, a, [role="button"], summary {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100svh; /* 100vh is taller than the visible area on phones, so short pages scrolled */
   background:
     radial-gradient(900px 500px at 50% -10%, var(--bg-glow), transparent 70%),
     var(--bg);
@@ -68,6 +90,8 @@ body {
   max-width: 42rem;
   margin: 0 auto;
   padding: 3rem 16px 4rem;
+  /* With viewport-fit=cover, keep content clear of the notch and the home indicator (env() is 0 otherwise). */
+  padding: max(3rem, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(4rem, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -109,6 +133,7 @@ body {
   max-width: 60%;
   padding: 0.2rem 0.45rem;
   font: inherit;
+  font-size: max(16px, 1em); /* under 16px, iOS zooms the page on focus */
   color: var(--text);
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -210,7 +235,7 @@ body {
   width: 100%;
   padding: 0.6rem 0.75rem;
   font: inherit;
-  font-size: 0.95rem;
+  font-size: max(16px, 0.95rem); /* under 16px, iOS zooms the page on focus */
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -233,6 +258,13 @@ body {
   border: 0;
   border-radius: 10px;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: transform var(--jgg-t-press) var(--jgg-ease-out), opacity var(--jgg-t-hover) ease;
+}
+
+.jgg-rate-send:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .jgg-rate-send:disabled {
@@ -244,6 +276,55 @@ body {
   margin: 0;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+/* --- motion utilities (docs/motion-system.md) ---
+   .jgg-press   press feedback for anything tappable
+   .jgg-enter   plays once when the element is inserted or unhidden
+   .jgg-reveal  same, slower and further, for answers and results; stagger with style="--jgg-i: 2"
+   JGG.motion in jgg.js does the same from script (enter, exit, swap, reveal, settle). */
+
+.jgg-press {
+  -webkit-user-select: none;
+  user-select: none;
+  transition: transform var(--jgg-t-press) var(--jgg-ease-out);
+}
+
+.jgg-press:active:not(:disabled, [aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+
+@keyframes jgg-enter {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+@keyframes jgg-reveal {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+}
+
+@keyframes jgg-fade {
+  from { opacity: 0; }
+}
+
+.jgg-enter {
+  animation: jgg-enter var(--jgg-t-enter) var(--jgg-ease-out) backwards;
+}
+
+.jgg-reveal {
+  animation: jgg-reveal var(--jgg-t-reveal) var(--jgg-ease-out) backwards;
+  animation-delay: calc(var(--jgg-i, 0) * var(--jgg-stagger));
+}
+
+/* Reduce motion: no movement, a short fade instead, nothing hidden or delayed. */
+@media (prefers-reduced-motion: reduce) {
+  .jgg-enter,
+  .jgg-reveal {
+    animation: jgg-fade var(--jgg-t-exit) ease backwards;
+  }
+  .jgg-press:active:not(:disabled, [aria-disabled="true"]),
+  .jgg-rate-send:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 /* The rest of a game's components (cards, buttons, leaderboard rows) currently live in each game's own CSS.

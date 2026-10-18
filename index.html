@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbf7f0">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1424">
   <title>jacob.gg</title>
   <meta name="description" content="Daily games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle, Stratle and Describle. New puzzles every day at 00:00 UTC.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314213d'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='20' font-weight='700' fill='%23fbf7f0' text-anchor='middle'%3Ej%3C/text%3E%3C/svg%3E">
@@ -35,11 +37,15 @@
       --shadow: 0 18px 40px -24px rgba(0, 0, 0, .8);
     }
     * { box-sizing: border-box; }
+    html { -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0; background: var(--bg); color: var(--ink);
       font: 16px/1.5 var(--jgg-font);
     }
-    main { max-width: 1040px; margin: 0 auto; padding: 48px 16px 64px; }
+    main {
+      max-width: 1040px; margin: 0 auto;
+      padding: max(48px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(64px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
     header { text-align: center; margin-bottom: 40px; }
     h1 {
       font: 700 clamp(2.6rem, 8vw, 4rem)/1 Georgia, "Times New Roman", serif;
@@ -77,7 +83,10 @@
       overflow: hidden; box-shadow: var(--shadow);
       transition: transform .18s ease, box-shadow .18s ease;
     }
-    a.card:hover, a.card:focus-visible { transform: translateY(-4px) rotate(-.4deg); }
+    a.card:focus-visible { transform: translateY(-4px) rotate(-.4deg); }
+    /* Touch has no hover: a tap would leave the card lifted, so lift only for a mouse. */
+    @media (hover: hover) and (pointer: fine) { a.card:hover { transform: translateY(-4px) rotate(-.4deg); } }
+    a.card:active { transform: scale(.98); transition-duration: var(--jgg-t-press); }
     a.card:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     .art { aspect-ratio: 16 / 10; display: block; width: 100%; }
     .art svg { display: block; width: 100%; height: 100%; }
@@ -102,7 +111,7 @@
     .soon { cursor: default; }
     .soon .art { filter: saturate(.75); }
     footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: .9rem; }
-    @media (prefers-reduced-motion: reduce) { .card { transition: none; } a.card:hover { transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .card { transition: none; } a.card:hover, a.card:focus-visible, a.card:active { transform: none; } }
   </style>
 </head>
 <body>
