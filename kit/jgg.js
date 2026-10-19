@@ -89,6 +89,12 @@
       + (d.votes === 1 ? ' rating.' : ' ratings.') : '';
   };
 
+  // Built once: creating a date formatter costs 40-90 ms on a phone, which landed on the results screen.
+  var DAY_FMT = null;
+  function dayFmt() {
+    return DAY_FMT || (DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }));
+  }
+
   function rate(opts) {
     var game = opts.game, day = opts.day, mount = opts.mount;
     if (!mount || !game || !day) return;
@@ -98,7 +104,7 @@
 
     var chosen = null, saved = null;
     var isToday = day === new Date().toISOString().slice(0, 10);
-    var dayName = new Date(day + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    var dayName = isToday ? '' : dayFmt().format(new Date(day + 'T12:00:00Z'));
     var box = el('div', 'jgg-rate');
     var title = el('p', 'jgg-rate-title', isToday ? 'Rate today’s ' + (NAMES[game] || game) : 'Rate ' + (NAMES[game] || game) + ' for ' + dayName);
     var stars = el('span', 'jgg-stars');
