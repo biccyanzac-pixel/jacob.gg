@@ -116,6 +116,11 @@ body {
   color: var(--accent);
 }
 
+/* The shared name in "Playing as Jo · change": a 20-letter name with no spaces must wrap, not push the page sideways */
+.jgg-name {
+  overflow-wrap: anywhere;
+}
+
 /* "Playing as Jo · change": the small link-style button games put next to the shared name */
 .jgg-change {
   padding: 0;

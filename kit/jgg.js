@@ -221,7 +221,7 @@
     function view() {
       if (!current) { mount.replaceChildren(); mount.hidden = true; return; }
       mount.hidden = false;
-      var who = el('b', '', current), change = el('button', 'jgg-change', 'change');
+      var who = el('b', 'jgg-name', current), change = el('button', 'jgg-change', 'change');
       change.type = 'button';
       change.addEventListener('click', edit);
       mount.replaceChildren('Playing as ', who, ' · ', change);
