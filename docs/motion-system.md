@@ -45,11 +45,11 @@ the Web Animations API (through `JGG.motion`) for anything started from script.
 
 | Name | What moves | CSS | Script |
 | --- | --- | --- | --- |
-| press | `scale(0.97)` while held | `.jgg-press` | (none) |
+| press | `scale(0.97)` while held; in at 120 ms, release snaps back in 80 ms | `.jgg-press` | (none) |
 | enter | fade in from `translateY(6px) scale(0.98)`, 220 ms | `.jgg-enter` | `JGG.motion.enter(el)` unhides and plays |
 | exit | fade out to `translateY(-4px) scale(0.98)`, 160 ms | (none) | `JGG.motion.exit(el)` plays, then hides |
-| swap | the old phase is pinned in place and fades out **while** the new one enters, so a phase change takes 220 ms (owner's rule: under 250 ms) | (none) | `JGG.motion.swap(fromEl, toEl)` |
-| reveal | fade in from `translateY(10px) scale(0.96)`, 320 ms, 50 ms stagger | `.jgg-reveal` + `style="--jgg-i: n"` | `JGG.motion.reveal(els)` |
+| swap | the old phase goes at once (the system's response snaps) and the new one enters, so a phase change takes 220 ms (owner's rule: under 250 ms) and never disturbs layout | (none) | `JGG.motion.swap(fromEl, toEl)` |
+| reveal | fade in from `translateY(10px) scale(0.96)`, 320 ms, 50 ms stagger capped at the 7th item | `.jgg-reveal` + `style="--jgg-i: n"` | `JGG.motion.reveal(els)` |
 | score-settle | the number counts up over 700 ms (ease-out cubic). Any tap or key jumps to the final value. Never `await` it before showing the share button or the board | (none) | `JGG.motion.settle(el, to, { from, format })` |
 | scroll | `scrollIntoView`, smooth normally and instant under reduce motion | (none) | `JGG.motion.scroll(el, { block })` |
 
@@ -64,7 +64,7 @@ m?.reveal(document.querySelectorAll('.round-row'));
 m ? m.settle(scoreEl, total) : (scoreEl.textContent = total);
 ```
 
-`settle` writes the final value into `aria-label` while counting, so screen readers hear the real score.
+While `settle` counts, the ticking number is `aria-hidden` and a visually hidden copy holds the final value, so screen readers hear the real score. A transition that interrupts another starts from where that one had got to. iOS Safari needs a `touchstart` listener for `:active`; the kit adds one.
 
 ## Owner's timing rules
 

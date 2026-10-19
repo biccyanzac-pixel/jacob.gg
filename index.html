@@ -83,7 +83,7 @@
       overflow: hidden; box-shadow: var(--shadow);
       transition: transform var(--jgg-t-hover, 150ms) ease, box-shadow var(--jgg-t-hover, 150ms) ease;
     }
-    a.card:focus-visible { transform: translateY(-4px) rotate(-.4deg); }
+    a.card:focus-visible { transform: translateY(-4px) rotate(-.4deg); transition: none; } /* keyboard: no motion */
     /* Touch has no hover: a tap would leave the card lifted, so lift only for a mouse. */
     @media (hover: hover) and (pointer: fine) { a.card:hover { transform: translateY(-4px) rotate(-.4deg); } }
     a.card:active { transform: scale(.98); transition-duration: var(--jgg-t-press); }
@@ -348,7 +348,7 @@
     function reorder(grid, cards) {
       const before = new Map([...grid.children].map(c => [c, c.getBoundingClientRect()]));
       grid.append(...cards);
-      if (calm) return;
+      if (calm) return grid.animate?.([{ opacity: 0.6 }, { opacity: 1 }], { duration: 160, easing: "ease" });
       for (const [c, r] of before) {
         const now = c.getBoundingClientRect(), dx = r.left - now.left, dy = r.top - now.top;
         if (dx || dy) c.animate?.([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],

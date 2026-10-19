@@ -252,12 +252,16 @@
   function reduced() {
     try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
   }
-  // Resolves true when finished, false when a newer transition on el cancelled it.
+  // Resolves true when finished, false when a newer transition on el cancelled it. A transition that interrupts
+  // another starts from where that one had got to (retargets), not from its first frame.
   function play(el, kind, delay) {
     if (!el || !el.animate) return Promise.resolve(true);
-    if (el._jgg) el._jgg.cancel();
     var calm = reduced(), out = kind === 'exit', a = { opacity: +out }, b = { opacity: +!out };
     if (!calm) { a.transform = out ? 'none' : FROM[kind]; b.transform = out ? FROM.exit : 'none'; }
+    if (el._jgg) {
+      if (el._jgg.playState === 'running') { var cs = getComputedStyle(el); a = { opacity: cs.opacity }; if (!calm) a.transform = cs.transform; delay = 0; }
+      el._jgg.cancel();
+    }
     var anim = el._jgg = el.animate([a, b], { duration: calm ? T.exit : T[kind], delay: calm ? 0 : delay || 0,
       easing: calm ? 'ease' : 'cubic-bezier(.23,1,.32,1)', fill: out ? 'forwards' : 'backwards' });
     return anim.finished.then(function () { return true; }, function () { return false; });
@@ -274,19 +278,11 @@
       return done;
     });
   }
-  // Phase change. The old screen is lifted out of the flow (pinned where it was) and fades out while the new one
-  // fades in, so the whole change takes one enter (220 ms), not exit + enter. A newer swap that brings `from`
-  // back mid-exit wins, so two phases never stay on screen.
+  // Phase change: the old screen goes at once (the system's response snaps) and the new one enters, so the change
+  // takes 220 ms and never shows two screens or moves the old one out of its layout.
   function swap(from, to) {
-    if (!from || from.hidden || reduced() || !from.animate) { if (from) from.hidden = true; return enter(to); }
-    var keep = from.getAttribute('style'), st = from.style;
-    st.position = 'absolute'; st.top = from.offsetTop + 'px'; st.left = from.offsetLeft + 'px';
-    st.width = from.offsetWidth + 'px'; st.margin = '0'; st.pointerEvents = 'none';
-    var gone = exit(from).then(function (done) {
-      if (keep === null) from.removeAttribute('style'); else from.setAttribute('style', keep);
-      return done;
-    });
-    return Promise.all([gone, enter(to)]).then(function (r) { return r[0]; });
+    if (from && from !== to) { if (from._jgg) { from._jgg.cancel(); from._jgg = null; } from.hidden = true; }
+    return enter(to);
   }
   // scrollIntoView that respects reduce motion (instant instead of smooth).
   function scroll(el, opts) {
@@ -299,11 +295,12 @@
   function reveal(els, opts) {
     var gap = opts && opts.stagger != null ? opts.stagger : 50;
     return Promise.all(Array.prototype.map.call(els.length != null ? els : [els], function (el, i) {
-      return enter(el, { kind: 'reveal', delay: i * gap });
+      return enter(el, { kind: 'reveal', delay: Math.min(i, 6) * gap }); // never hold rows back long
     }));
   }
   // Counts el up to `to` (ease-out cubic). Never await it before showing anything else. Any tap or key jumps
-  // straight to the final value, which sits in aria-label meanwhile.
+  // straight to the final value. Screen readers get the final value at once from a hidden copy; the ticking
+  // number is hidden from them.
   function settle(el, to, opts) {
     opts = opts || {};
     var from = opts.from || 0, ms = opts.duration || 700, start, fmt = opts.format || function (v) { return String(Math.round(v)); };
@@ -311,12 +308,17 @@
     if (!el) return Promise.resolve();
     if (el._jggSkip) el._jggSkip();
     if (reduced() || from === to) { el.textContent = final; return Promise.resolve(); }
-    el.setAttribute('aria-label', final);
+    var hid = el.getAttribute('aria-hidden'), sr = document.createElement('span');
+    sr.textContent = final;
+    sr.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+    el.setAttribute('aria-hidden', 'true');
+    if (el.parentNode) el.parentNode.insertBefore(sr, el.nextSibling);
     return new Promise(function (resolve) {
       function done() {
         cancelAnimationFrame(el._jggN);
         removeEventListener('pointerdown', done, true); removeEventListener('keydown', done, true);
-        el._jggSkip = null; el.textContent = final; el.removeAttribute('aria-label');
+        el._jggSkip = null; el.textContent = final; sr.remove();
+        if (hid === null) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', hid);
         resolve();
       }
       el._jggSkip = done;
@@ -329,6 +331,9 @@
       });
     });
   }
+
+  // iOS Safari shows :active press states only when some touchstart listener exists.
+  try { document.addEventListener('touchstart', function () {}, { passive: true }); } catch (e) { /* old browser */ }
 
   var motion = { reduced: reduced, enter: enter, exit: exit, swap: swap, reveal: reveal, settle: settle, scroll: scroll };
 

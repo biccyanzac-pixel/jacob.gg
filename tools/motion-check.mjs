@@ -58,6 +58,47 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     const layoutOk = await page.evaluate(() => [...document.querySelectorAll('#m-a, #m-b')].every((e) => !e.getAttribute('style')));
     check(`${name}: swap leaves no inline styles behind`, layoutOk);
 
+    // swap in real layouts: the old screen is gone on the first frame; the new one sits where it belongs
+    const real = await page.evaluate(async () => {
+      const out = [];
+      for (const css of ['display:grid;justify-items:center', 'display:flex;justify-content:center', 'height:120px;overflow:auto']) {
+        const box = document.createElement('div'); box.style.cssText = css;
+        box.innerHTML = '<div class="a" style="width:100%;max-width:640px">Old phase with a long sentence of text that wraps</div><div class="b" hidden style="width:100%;max-width:640px">New</div>';
+        document.body.append(box);
+        if (css.includes('overflow')) { box.prepend(Object.assign(document.createElement('div'), { style: 'height:300px' })); box.scrollTop = 200; }
+        const a = box.querySelector('.a'), b = box.querySelector('.b');
+        a.hidden = true; b.hidden = false; const want = [b.offsetLeft, b.offsetTop, b.offsetWidth]; b.hidden = true; a.hidden = false;
+        const p = JGG.motion.swap(a, b);
+        const got = [b.offsetLeft, b.offsetTop, b.offsetWidth]; // layout boxes: the enter's own transform isn't a move
+        out.push({ css, aGone: a.hidden, dx: got[0] - want[0], dy: got[1] - want[1], w: got[2] - want[2] });
+        await p; box.remove();
+      }
+      return out;
+    });
+    check(`${name}: swap never moves or resizes anything (grid, flex, scroller)`, real.every((r) => r.aGone && r.dx === 0 && r.dy === 0 && r.w === 0), JSON.stringify(real));
+
+    // interrupted enter retargets from where it was instead of restarting at opacity 0
+    const retarget = await page.evaluate(async () => {
+      const b = document.getElementById('m-b'), a = document.getElementById('m-a');
+      JGG.motion.swap(b.hidden ? a : b, b.hidden ? b : a);
+      const el = b.hidden ? a : b;
+      await new Promise((r) => setTimeout(r, 120));
+      const before = +getComputedStyle(el).opacity;
+      JGG.motion.enter(el);
+      const after = +getComputedStyle(el).opacity;
+      await new Promise((r) => setTimeout(r, 300));
+      return { before, after };
+    });
+    check(`${name}: an interrupted enter continues from where it was`, retarget.after >= retarget.before - 0.05, JSON.stringify(retarget));
+
+    // reveal stagger is capped, so a long list never waits
+    const cap = await page.evaluate(() => {
+      const ul = document.createElement('ul'); for (let i = 0; i < 12; i++) ul.append(document.createElement('li'));
+      document.body.append(ul); JGG.motion.reveal(ul.children);
+      const d = Math.max(...[...ul.children].map((li) => li.getAnimations()[0]?.effect.getTiming().delay ?? 0)); ul.remove(); return d;
+    });
+    check(`${name}: reveal stagger capped (12 rows wait at most 300 ms)`, cap <= 300, `${cap} ms`);
+
     // owner's rule: the count-up is skippable with a tap and never holds anything up
     if (reducedMotion !== 'reduce') {
       await page.evaluate(() => { document.getElementById('m-score').textContent = '0'; JGG.motion.settle(document.getElementById('m-score'), 8420, { format: (v) => Math.round(v).toLocaleString('en') }); });
@@ -77,13 +118,15 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     const first = await page.textContent('#m-score');
     const label = await page.getAttribute('#m-score', 'aria-label');
     if (reducedMotion === 'reduce') check(`${name}: settle shows the final score at once`, first === '8,420', first);
-    else check(`${name}: settle exposes the final score to screen readers while counting`, label === '8,420' || first === '8,420', `${first} / ${label}`);
-    await page.waitForFunction(() => document.getElementById('m-score').textContent === '8,420', null, { timeout: 3000 });
+    else check(`${name}: settle gives screen readers the final score while counting`, await page.evaluate(() => { const s = document.getElementById('m-score'); return s.getAttribute('aria-hidden') === 'true' && s.nextSibling?.textContent === '8,420'; }) || first === '8,420', first);
+    await page.waitForFunction(() => { const s = document.getElementById('m-score'); return s.textContent === '8,420' && !s.hasAttribute('aria-hidden'); }, null, { timeout: 3000 });
     check(`${name}: settle ends on the final value`, true, `${Date.now() - t0} ms`);
+    check(`${name}: settle cleans up its screen-reader copy`, await page.evaluate(() => !document.getElementById('m-score').hasAttribute('aria-hidden') && document.getElementById('m-score').nextSibling?.textContent !== '8,420'));
     // hub: cascade within 250 ms, first card tappable at once, reorder glides (not under reduce motion)
     await page.route('http://stub.hub/api/stats', (r) => setTimeout(() => r.fulfill({ json: {
       plays: { today: 1, week: 2, all: 3 },
       games: ['describle', 'stratle', 'perceptle', 'factle', 'pointle', 'predictle', 'yogle', 'ridd-le'].map((id) => ({ id, plays: { all: 5 }, rating: { votes: 0 } })) } }), 600));
+    await page.addInitScript(() => { const o = Element.prototype.animate; window.__gridAnims = 0; Element.prototype.animate = function (...a) { if (this.classList?.contains('grid')) window.__gridAnims++; return o.apply(this, a); }; });
     await page.goto('http://localhost:8083/?hub=' + encodeURIComponent('http://stub.hub'));
     const hub = await page.evaluate(() => {
       const first = document.querySelector('.grid .card'), r = first.getBoundingClientRect();
@@ -94,7 +137,8 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     check(`${name}: hub cascade done within 250 ms, first card tappable at once`, hub.tappable && hub.longest <= 250 && hub.firstDelay === 0, JSON.stringify(hub));
     await page.waitForFunction(() => document.querySelector('.grid .card').dataset.game === 'describle');
     const glides = await page.evaluate(() => document.getAnimations().filter((a) => JSON.stringify(a.effect.getKeyframes()).includes('translate(')).length);
-    check(`${name}: hub reorder ${reducedMotion === 'reduce' ? 'jumps without motion' : 'glides'}`, reducedMotion === 'reduce' ? glides === 0 : glides > 0, `${glides} gliding`);
+    const fades = await page.evaluate(() => window.__gridAnims);
+    check(`${name}: hub reorder ${reducedMotion === 'reduce' ? 'fades without moving' : 'glides'}`, reducedMotion === 'reduce' ? glides === 0 && fades > 0 : glides > 0, `${glides} gliding, ${fades} fading`);
     check(`${name}: no page errors`, errors.length === 0, errors.join('; '));
     check(`${name}: no horizontal scroll`, !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)));
     await ctx.close();

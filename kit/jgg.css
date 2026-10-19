@@ -265,11 +265,12 @@ body {
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
-  transition: transform var(--jgg-t-press) var(--jgg-ease-out), opacity var(--jgg-t-hover) ease;
+  transition: transform 80ms var(--jgg-ease-out), opacity var(--jgg-t-hover) ease;
 }
 
 .jgg-rate-send:active:not(:disabled) {
   transform: scale(0.97);
+  transition-duration: var(--jgg-t-press), var(--jgg-t-hover);
 }
 
 .jgg-rate-send:disabled {
@@ -289,14 +290,16 @@ body {
    .jgg-reveal  same, slower and further, for answers and results; stagger with style="--jgg-i: 2"
    JGG.motion in jgg.js does the same from script (enter, exit, swap, reveal, settle). */
 
+/* Asymmetric: pressing in takes --jgg-t-press, letting go snaps back in 80 ms. */
 .jgg-press {
   -webkit-user-select: none;
   user-select: none;
-  transition: transform var(--jgg-t-press) var(--jgg-ease-out);
+  transition: transform 80ms var(--jgg-ease-out);
 }
 
 .jgg-press:active:not(:disabled, [aria-disabled="true"]) {
   transform: scale(0.97);
+  transition-duration: var(--jgg-t-press);
 }
 
 @keyframes jgg-enter {
@@ -317,7 +320,7 @@ body {
 
 .jgg-reveal {
   animation: jgg-reveal var(--jgg-t-reveal) var(--jgg-ease-out) backwards;
-  animation-delay: calc(var(--jgg-i, 0) * var(--jgg-stagger));
+  animation-delay: calc(min(var(--jgg-i, 0), 6) * var(--jgg-stagger)); /* capped: never hold rows back long */
 }
 
 /* Reduce motion: no movement, a short fade instead, nothing hidden or delayed. */
