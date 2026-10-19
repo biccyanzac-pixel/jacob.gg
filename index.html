@@ -81,11 +81,11 @@
       display: flex; flex-direction: column; text-decoration: none; color: inherit;
       background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
       overflow: hidden; box-shadow: var(--shadow);
-      transition: transform var(--jgg-t-hover, 150ms) ease, box-shadow var(--jgg-t-hover, 150ms) ease;
+      transition: transform 80ms var(--jgg-ease-out, cubic-bezier(0.23, 1, 0.32, 1)), box-shadow var(--jgg-t-hover, 150ms) ease; /* release snaps */
     }
     a.card:focus-visible { transform: translateY(-4px) rotate(-.4deg); transition: none; } /* keyboard: no motion */
     /* Touch has no hover: a tap would leave the card lifted, so lift only for a mouse. */
-    @media (hover: hover) and (pointer: fine) { a.card:hover { transform: translateY(-4px) rotate(-.4deg); } }
+    @media (hover: hover) and (pointer: fine) { a.card:hover { transform: translateY(-4px) rotate(-.4deg); transition-duration: var(--jgg-t-hover, 150ms); } }
     a.card:active { transform: scale(.98); transition-duration: var(--jgg-t-press); }
     a.card:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     .art { aspect-ratio: 16 / 10; display: block; width: 100%; }

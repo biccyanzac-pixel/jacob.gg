@@ -64,7 +64,7 @@ m?.reveal(document.querySelectorAll('.round-row'));
 m ? m.settle(scoreEl, total) : (scoreEl.textContent = total);
 ```
 
-While `settle` counts, the ticking number is `aria-hidden` and a visually hidden copy holds the final value, so screen readers hear the real score. A transition that interrupts another starts from where that one had got to. iOS Safari needs a `touchstart` listener for `:active`; the kit adds one.
+While `settle` counts (at most 700 ms), the ticking number is `aria-hidden` and a visually hidden copy, inserted as the score's next sibling, holds the final value (so don't style the score with `:last-child`, `+` or `nth-child` selectors that a temporary sibling would upset), so screen readers hear the real score. A transition that interrupts another starts from where that one had got to. iOS Safari needs a `touchstart` listener for `:active`; the kit adds one.
 
 ## Owner's timing rules
 

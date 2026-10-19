@@ -310,7 +310,7 @@
     if (reduced() || from === to) { el.textContent = final; return Promise.resolve(); }
     var hid = el.getAttribute('aria-hidden'), sr = document.createElement('span');
     sr.textContent = final;
-    sr.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+    sr.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
     el.setAttribute('aria-hidden', 'true');
     if (el.parentNode) el.parentNode.insertBefore(sr, el.nextSibling);
     return new Promise(function (resolve) {
