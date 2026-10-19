@@ -23,6 +23,17 @@ Once per computer, for deploying: push access to `github.com/biccyanzac-pixel` (
 `npx wrangler login` for the Cloudflare workers and databases. No secrets live in the repos (the hub's admin
 password is a Cloudflare secret).
 
+**GitHub CLI (`gh`) for PRs, once per computer.** Agents open PRs with `gh`; if `gh --version` fails, install it, don't skip the PR:
+- Windows: `winget install --id GitHub.cli -e --scope user --silent --accept-package-agreements --accept-source-agreements`
+  (no admin). The new PATH only reaches new shells, so in the same session call it by its full path:
+  `$LOCALAPPDATA/Microsoft/WinGet/Packages/GitHub.cli_Microsoft.Winget.Source_8wekyb3d8bbwe/bin/gh.exe`
+  (or `%LOCALAPPDATA%\Microsoft\WinGet\Links\gh.exe`).
+- macOS: `brew install gh`. Linux: see https://github.com/cli/cli#installation.
+- Then `gh auth status`. It's often already signed in (the login lives in the OS keyring and is shared by every
+  session). If not, `gh auth login` in an interactive terminal, signing in as biccyanzac-pixel.
+- Open PRs with `gh pr create -R biccyanzac-pixel/<repo> --head <branch> --base main --title ... --body-file <file>`
+  (`--draft` for work the owner still has to test).
+
 Run `npm run setup` again any time to pick up new games and other people's commits.
 
 ## 1. Where things are

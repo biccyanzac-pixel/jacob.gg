@@ -31,3 +31,5 @@ The essentials, in case you only skim:
 - Other agents may be working in a game repo. Check `git status` and recent file times first, `git pull` before
   starting, and never commit someone else's uncommitted work.
 - Commit as `biccyanzac-pixel <285977456+biccyanzac-pixel@users.noreply.github.com>` (setup sets this per repo).
+- PRs go through `gh`. If `gh --version` fails, install it (one-liner and same-session path in PLAYBOOK.md section 0),
+  don't skip the PR.
