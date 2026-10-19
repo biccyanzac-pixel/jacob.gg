@@ -12,7 +12,7 @@
  *                                         and call setName whenever the player sets or changes theirs.
  *   JGG.playingAs({ mount, name, onChange }) -> "Playing as Jo · change" with an inline editor, for games that
  *                                         only ask for a name at the end. onChange(newName) after Save.
- *   JGG.motion.enter(el) / exit(el) / swap(from, to) / reveal(els) / settle(el, to, opts) / reduced()
+ *   JGG.motion.enter(el) / exit(el) / swap(from, to) / reveal(els) / settle(el, to, opts) / scroll(el, opts) / reduced()
  *                                      -> the shared transitions (docs/motion-system.md). enter/exit toggle the
  *                                         hidden attribute; all return promises; reduce motion gets a short fade.
  *
@@ -274,9 +274,27 @@
       return done;
     });
   }
-  // A newer swap that brings `from` back mid-exit wins, so two phases never show together.
+  // Phase change. The old screen is lifted out of the flow (pinned where it was) and fades out while the new one
+  // fades in, so the whole change takes one enter (220 ms), not exit + enter. A newer swap that brings `from`
+  // back mid-exit wins, so two phases never stay on screen.
   function swap(from, to) {
-    return exit(from).then(function (done) { return done && enter(to); });
+    if (!from || from.hidden || reduced() || !from.animate) { if (from) from.hidden = true; return enter(to); }
+    var keep = from.getAttribute('style'), st = from.style;
+    st.position = 'absolute'; st.top = from.offsetTop + 'px'; st.left = from.offsetLeft + 'px';
+    st.width = from.offsetWidth + 'px'; st.margin = '0'; st.pointerEvents = 'none';
+    var gone = exit(from).then(function (done) {
+      if (keep === null) from.removeAttribute('style'); else from.setAttribute('style', keep);
+      return done;
+    });
+    return Promise.all([gone, enter(to)]).then(function (r) { return r[0]; });
+  }
+  // scrollIntoView that respects reduce motion (instant instead of smooth).
+  function scroll(el, opts) {
+    if (!el) return;
+    var o = { block: 'start' };
+    for (var k in opts) o[k] = opts[k];
+    o.behavior = reduced() ? 'auto' : 'smooth';
+    el.scrollIntoView(o);
   }
   function reveal(els, opts) {
     var gap = opts && opts.stagger != null ? opts.stagger : 50;
@@ -284,27 +302,35 @@
       return enter(el, { kind: 'reveal', delay: i * gap });
     }));
   }
-  // Counts el up to `to` (ease-out cubic). The final text sits in aria-label meanwhile.
+  // Counts el up to `to` (ease-out cubic). Never await it before showing anything else. Any tap or key jumps
+  // straight to the final value, which sits in aria-label meanwhile.
   function settle(el, to, opts) {
     opts = opts || {};
     var from = opts.from || 0, ms = opts.duration || 700, start, fmt = opts.format || function (v) { return String(Math.round(v)); };
     var final = fmt(to);
     if (!el) return Promise.resolve();
-    cancelAnimationFrame(el._jggN);
+    if (el._jggSkip) el._jggSkip();
     if (reduced() || from === to) { el.textContent = final; return Promise.resolve(); }
     el.setAttribute('aria-label', final);
     return new Promise(function (resolve) {
+      function done() {
+        cancelAnimationFrame(el._jggN);
+        removeEventListener('pointerdown', done, true); removeEventListener('keydown', done, true);
+        el._jggSkip = null; el.textContent = final; el.removeAttribute('aria-label');
+        resolve();
+      }
+      el._jggSkip = done;
+      addEventListener('pointerdown', done, true); addEventListener('keydown', done, true);
       el._jggN = requestAnimationFrame(function frame(now) {
         var t = Math.min(1, (now - (start = start || now)) / ms);
-        el.textContent = t < 1 ? fmt(from + (to - from) * (1 - Math.pow(1 - t, 3))) : final;
-        if (t < 1) { el._jggN = requestAnimationFrame(frame); return; }
-        el.removeAttribute('aria-label');
-        resolve();
+        if (t >= 1) return done();
+        el.textContent = fmt(from + (to - from) * (1 - Math.pow(1 - t, 3)));
+        el._jggN = requestAnimationFrame(frame);
       });
     });
   }
 
-  var motion = { reduced: reduced, enter: enter, exit: exit, swap: swap, reveal: reveal, settle: settle };
+  var motion = { reduced: reduced, enter: enter, exit: exit, swap: swap, reveal: reveal, settle: settle, scroll: scroll };
 
   window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, playingAs: playingAs, hubUrl: hubUrl, motion: motion, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
 })();

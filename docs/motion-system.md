@@ -48,9 +48,10 @@ the Web Animations API (through `JGG.motion`) for anything started from script.
 | press | `scale(0.97)` while held | `.jgg-press` | (none) |
 | enter | fade in from `translateY(6px) scale(0.98)`, 220 ms | `.jgg-enter` | `JGG.motion.enter(el)` unhides and plays |
 | exit | fade out to `translateY(-4px) scale(0.98)`, 160 ms | (none) | `JGG.motion.exit(el)` plays, then hides |
-| swap | exit the old phase, then enter the new | (none) | `JGG.motion.swap(fromEl, toEl)` |
+| swap | the old phase is pinned in place and fades out **while** the new one enters, so a phase change takes 220 ms (owner's rule: under 250 ms) | (none) | `JGG.motion.swap(fromEl, toEl)` |
 | reveal | fade in from `translateY(10px) scale(0.96)`, 320 ms, 50 ms stagger | `.jgg-reveal` + `style="--jgg-i: n"` | `JGG.motion.reveal(els)` |
-| score-settle | the number counts up over 700 ms (ease-out cubic) | (none) | `JGG.motion.settle(el, to, { from, format })` |
+| score-settle | the number counts up over 700 ms (ease-out cubic). Any tap or key jumps to the final value. Never `await` it before showing the share button or the board | (none) | `JGG.motion.settle(el, to, { from, format })` |
+| scroll | `scrollIntoView`, smooth normally and instant under reduce motion | (none) | `JGG.motion.scroll(el, { block })` |
 
 The CSS classes play once when the element is inserted or unhidden. Under reduce motion, each script helper becomes a
 160 ms fade (or no animation for `settle`).
@@ -64,6 +65,13 @@ m ? m.settle(scoreEl, total) : (scoreEl.textContent = total);
 ```
 
 `settle` writes the final value into `aria-label` while counting, so screen readers hear the real score.
+
+## Owner's timing rules
+
+- A phase change adds under 250 ms as the player sees it. Exit and enter overlap, and the new screen is tappable
+  from its first frame.
+- Group entrances (the hub's cards) finish within 250 ms, and the first item has no delay.
+- Count-ups can be skipped with a tap and never delay the share button or the leaderboard.
 
 ## What not to animate
 

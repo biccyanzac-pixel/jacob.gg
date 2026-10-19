@@ -81,7 +81,7 @@
       display: flex; flex-direction: column; text-decoration: none; color: inherit;
       background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
       overflow: hidden; box-shadow: var(--shadow);
-      transition: transform .18s ease, box-shadow .18s ease;
+      transition: transform var(--jgg-t-hover, 150ms) ease, box-shadow var(--jgg-t-hover, 150ms) ease;
     }
     a.card:focus-visible { transform: translateY(-4px) rotate(-.4deg); }
     /* Touch has no hover: a tap would leave the card lifted, so lift only for a mouse. */
@@ -335,12 +335,33 @@
     // (half plays, half rating); without it the page keeps the order above.
     const HUB = new URLSearchParams(location.search).get("hub") || "https://jgg-hub.jacob-gg-leaderboard-worker.workers.dev";
     const n = v => new Intl.NumberFormat("en", { notation: v >= 10000 ? "compact" : "standard" }).format(v);
+    // Motion (docs/motion-system.md). Cards arrive in a quick cascade, all done within 250 ms; the first has no
+    // delay and every card is tappable throughout. Web Animations, not CSS, so moving a card in the reorder below
+    // doesn't restart it. Reduce motion: a short fade and no gliding.
+    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)", EASE_IN_OUT = "cubic-bezier(0.77, 0, 0.175, 1)";
+    document.querySelectorAll(".grid .card").forEach((card, i) => card.animate?.(
+      calm ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: "translateY(8px) scale(.98)" }, { opacity: 1, transform: "none" }],
+      { duration: calm ? 160 : 200, delay: calm ? 0 : Math.min(i, 2) * 25, easing: EASE_OUT, fill: "backwards" }));
+
+    // Moves cards into rank order and glides each from where it was (FLIP), so nothing jumps under a finger.
+    function reorder(grid, cards) {
+      const before = new Map([...grid.children].map(c => [c, c.getBoundingClientRect()]));
+      grid.append(...cards);
+      if (calm) return;
+      for (const [c, r] of before) {
+        const now = c.getBoundingClientRect(), dx = r.left - now.left, dy = r.top - now.top;
+        if (dx || dy) c.animate?.([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
+          { duration: 250, easing: EASE_IN_OUT, composite: "add" });
+      }
+    }
+
     fetch(HUB.replace(/\/+$/, "") + "/api/stats").then(r => r.ok ? r.json() : Promise.reject()).then(stats => {
       document.getElementById("plays-today").textContent = n(stats.plays.today);
       document.getElementById("plays-week").textContent = n(stats.plays.week);
       document.getElementById("plays-all").textContent = n(stats.plays.all);
       document.getElementById("plays").hidden = false;
-      const grid = document.querySelector(".grid");
+      const grid = document.querySelector(".grid"), ranked = [];
       for (const g of stats.games) {
         const card = grid.querySelector(`[data-game="${g.id}"]`);
         if (!card) continue;
@@ -354,8 +375,10 @@
           meta.append(" · ", star, ` ${g.rating.avg.toFixed(1)} (${n(g.rating.votes)})`);
         }
         card.querySelector(".body").append(meta);
-        grid.append(card);
+        meta.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease" });
+        ranked.push(card);
       }
+      reorder(grid, ranked);
     }).catch(() => { /* the page works without stats */ });
   </script>
 </body>
