@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CODE_ALPHABET, makeCode, normalizeCode, rankPoints, applyHandicap, claimSlot, plausibility, cleanNickname } from '../src/logic.js';
+import { CODE_ALPHABET, makeCode, normalizeCode, rankPoints, applyHandicap, claimSlot, plausibility, cleanNickname, cleanRows } from '../src/logic.js';
 
 test('codes use only unambiguous characters and are 4 long', () => {
   for (const ch of '0O1IL') assert.ok(!CODE_ALPHABET.includes(ch), ch);
@@ -57,4 +57,15 @@ test('plausibility flags but never decides', () => {
 test('nicknames are trimmed, de-controlled and capped at 20', () => {
   assert.equal(cleanNickname('  Jo \n  Bloggs\u0007 '), 'Jo Bloggs');
   assert.equal(cleanNickname('W'.repeat(40)).length, 20);
+});
+
+test('colour rows: g/y/x only, so no letters can pass through a room', () => {
+  assert.deepEqual(cleanRows(['gyxxg', 'ggggg']), ['gyxxg', 'ggggg']);
+  assert.deepEqual(cleanRows([]), []);
+  assert.equal(cleanRows(['crane']), undefined);
+  assert.equal(cleanRows(['gyx', 'GYX']), undefined);
+  assert.equal(cleanRows(['ggggggggg']), undefined);       // longer than 8
+  assert.equal(cleanRows(Array(9).fill('g')), undefined);  // more than 8 rows
+  assert.equal(cleanRows('gyx'), undefined);
+  assert.equal(cleanRows([{ rows: 'g' }]), undefined);
 });

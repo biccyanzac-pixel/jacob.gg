@@ -22,6 +22,13 @@ export function cleanNickname(n) {
   return String(n ?? '').replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20);
 }
 
+// Live colour rows from a word game (docs/room-contract.md): at most 8 rows of g/y/x, 8 tiles each, so a row can
+// never carry letters. Anything else is dropped (undefined), not trimmed.
+export function cleanRows(rows) {
+  if (!Array.isArray(rows) || rows.length > 8) return undefined;
+  return rows.every((r) => typeof r === 'string' && /^[gyx]{1,8}$/.test(r)) ? [...rows] : undefined;
+}
+
 // A boost of 10 means +10%. Clamped to 0..100 so a typo can't hand someone 1000%.
 export function applyHandicap(score, boostPct = 0) {
   const b = Math.min(100, Math.max(0, Number(boostPct) || 0));

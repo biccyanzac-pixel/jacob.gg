@@ -25,6 +25,7 @@
       --eye-a: #d9b8ff;    --eye-b: #6a3fc8;
       --strat-a: #ffc6d9;  --strat-b: #c2255c;
       --desc-a: #8ee6c8;   --desc-b: #3346c9;
+      --lett-a: #fde68a;   --lett-b: #157a4a;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -105,6 +106,7 @@
     .eye .art    { background: radial-gradient(circle at 70% 25%, var(--eye-a), var(--eye-b) 80%); }
     .strat .art  { background: linear-gradient(200deg, var(--strat-a), var(--strat-b)); }
     .desc .art   { background: linear-gradient(160deg, var(--desc-a), var(--desc-b)); }
+    .lett .art   { background: linear-gradient(200deg, var(--lett-a), var(--lett-b)); }
     .body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .body h2 { margin: 0; font: 700 1.5rem/1.2 Georgia, "Times New Roman", serif; }
     .body p { margin: 0; color: var(--muted); }
@@ -299,6 +301,34 @@
         <div class="body">
           <h2>Describle</h2>
           <p>Describe the day's word without saying it, or 5 banned words. An AI in your browser tries to guess it. Fewer words score more.</p>
+        </div>
+      </a>
+      <a class="card lett" data-game="lettrle" href="/lettrle/">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <g stroke="none">
+              <rect x="70" y="36" width="32" height="38" rx="6" fill="#f2b632"/>
+              <rect x="108" y="36" width="32" height="38" rx="6" fill="#ffffff" opacity=".55"/>
+              <rect x="146" y="36" width="32" height="38" rx="6" fill="#f2b632"/>
+              <rect x="184" y="36" width="32" height="38" rx="6" fill="#ffffff" opacity=".55"/>
+              <rect x="222" y="36" width="32" height="38" rx="6" fill="#ffffff" opacity=".55"/>
+              <rect x="70" y="80" width="32" height="38" rx="6" fill="#ffffff" opacity=".55"/>
+              <rect x="108" y="80" width="32" height="38" rx="6" fill="#2fbf71"/>
+              <rect x="146" y="80" width="32" height="38" rx="6" fill="#f2b632"/>
+              <rect x="184" y="80" width="32" height="38" rx="6" fill="#2fbf71"/>
+              <rect x="222" y="80" width="32" height="38" rx="6" fill="#ffffff" opacity=".55"/>
+              <rect x="70" y="124" width="32" height="38" rx="6" fill="#2fbf71"/>
+              <rect x="108" y="124" width="32" height="38" rx="6" fill="#2fbf71"/>
+              <rect x="146" y="124" width="32" height="38" rx="6" fill="#2fbf71"/>
+              <rect x="184" y="124" width="32" height="38" rx="6" fill="#2fbf71"/>
+              <rect x="222" y="124" width="32" height="38" rx="6" fill="#2fbf71"/>
+            </g>
+            <path d="M262 64 l12 12 l24 -28" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>Lettrle</h2>
+          <p>Guess the day's word in six tries. Green is the right spot, yellow is in the word. Common words on Monday, rarer by Saturday, six letters on Sunday.</p>
         </div>
       </a>
     </div>

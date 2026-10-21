@@ -35,6 +35,10 @@
     {
       "name": "Describle",
       "path": "../describle"
+    },
+    {
+      "name": "Lettrle",
+      "path": "../lettrle"
     }
   ],
   "settings": {

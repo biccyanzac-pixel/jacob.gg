@@ -53,6 +53,12 @@ binding = "DB_DESCRIBLE"
 database_name = "describle-leaderboard"
 database_id = "7df914a0-5150-4a5a-a57f-7c541b34ebde"
 
+# Shared by the word games; each game's tables have its own prefix (Lettrle: lettrle_*).
+[[d1_databases]]
+binding = "DB_WORDS"
+database_name = "words-leaderboard"
+database_id = "b9b83eb0-a2e6-457d-b502-3fce699c390f"
+
 [vars]
 ALLOWED_ORIGINS = "https://biccyanzac-pixel.github.io"
 # ADMIN_PASSWORD is a secret: npx wrangler secret put ADMIN_PASSWORD
