@@ -6,6 +6,8 @@ compatibility_date = "2026-10-01"
 
 [vars]
 ALLOWED_ORIGINS = "https://biccyanzac-pixel.github.io,http://localhost:8083,http://localhost:8099"
+# a family on one home Wi-Fi shares an IP, and reconnects count as joins
+JOIN_LIMIT = "60"
 
 [[durable_objects.bindings]]
 name = "ROOM"
