@@ -174,6 +174,7 @@ Cloudflare Worker + D1, free plan, the same shape in every game (copy `perceptle
 | Predictle | 8090 | 8798 |
 | ridd-le | 5173 (Vite dev), 4173 (preview) | 8787 |
 | jacob.gg hub | 8083 | 8831 |
+| jacob.gg rooms (Play together) | (lobby on the hub site) | 8861 |
 
 Pick the next free pair for a new game and add it here.
 
