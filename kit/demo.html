@@ -11,6 +11,7 @@
       .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.5rem; }
       .eyebrow { margin: 0; font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
       h1 { margin: .4rem 0 0; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.2; letter-spacing: -.02em; }
+      .demo-btn { padding: .55rem 1rem; font: inherit; font-weight: 650; color: #fff; background: var(--accent); border: 0; border-radius: 10px; cursor: pointer; }
       .levels { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin: 1rem 0 0; padding: 0; list-style: none; font-size: .85rem; color: var(--muted); }
     </style>
     <script src="jgg.js" defer></script>
@@ -27,6 +28,17 @@
         <ul class="levels" id="levels"></ul>
         <div id="rate"></div>
       </section>
+      <section class="card" id="motion">
+        <p class="eyebrow">Motion (docs/motion-system.md)</p>
+        <p>
+          <button class="jgg-press demo-btn" id="m-swap" type="button">Swap phase</button>
+          <button class="jgg-press demo-btn" id="m-reveal" type="button">Reveal + settle</button>
+        </p>
+        <div id="m-a">Phase A</div>
+        <div id="m-b" hidden>Phase B</div>
+        <ul class="levels" id="m-rows"><li>Round 1</li><li>Round 2</li><li>Round 3</li></ul>
+        <p>Score: <b id="m-score">0</b></p>
+      </section>
     </main>
     <script type="module">
       const today = new Date().toISOString().slice(0, 10);
@@ -35,6 +47,9 @@
       document.getElementById('levels').append(...week.map((d) => { const li = document.createElement('li'); li.append(JGG.levelChip(d)); return li; }));
       const game = new URLSearchParams(location.search).get('game') || 'perceptle';
       JGG.rate({ game, day: today, mount: document.getElementById('rate') });
+      const $ = (id) => document.getElementById(id);
+      $('m-swap').onclick = () => ($('m-a').hidden ? JGG.motion.swap($('m-b'), $('m-a')) : JGG.motion.swap($('m-a'), $('m-b')));
+      $('m-reveal').onclick = () => { JGG.motion.reveal($('m-rows').children); JGG.motion.settle($('m-score'), 8420, { format: (v) => Math.round(v).toLocaleString('en') }); };
     </script>
   </body>
 </html>

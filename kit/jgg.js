@@ -12,6 +12,9 @@
  *                                         and call setName whenever the player sets or changes theirs.
  *   JGG.playingAs({ mount, name, onChange }) -> "Playing as Jo · change" with an inline editor, for games that
  *                                         only ask for a name at the end. onChange(newName) after Save.
+ *   JGG.motion.enter(el) / exit(el) / swap(from, to) / reveal(els) / settle(el, to, opts) / scroll(el, opts) / reduced()
+ *                                      -> the shared transitions (docs/motion-system.md). enter/exit toggle the
+ *                                         hidden attribute; all return promises; reduce motion gets a short fade.
  *
  * Ratings go to the hub worker (jacob.gg/worker). ?hub=<url> overrides it for local testing, ?hub=off disables.
  * Every call fails soft: if the hub is down, the widget says so and the game carries on.
@@ -86,6 +89,12 @@
       + (d.votes === 1 ? ' rating.' : ' ratings.') : '';
   };
 
+  // Built once: creating a date formatter costs 40-90 ms on a phone, which landed on the results screen.
+  var DAY_FMT = null;
+  function dayFmt() {
+    return DAY_FMT || (DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }));
+  }
+
   function rate(opts) {
     var game = opts.game, day = opts.day, mount = opts.mount;
     if (!mount || !game || !day) return;
@@ -95,7 +104,7 @@
 
     var chosen = null, saved = null;
     var isToday = day === new Date().toISOString().slice(0, 10);
-    var dayName = new Date(day + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    var dayName = isToday ? '' : dayFmt().format(new Date(day + 'T12:00:00Z'));
     var box = el('div', 'jgg-rate');
     var title = el('p', 'jgg-rate-title', isToday ? 'Rate today’s ' + (NAMES[game] || game) : 'Rate ' + (NAMES[game] || game) + ' for ' + dayName);
     var stars = el('span', 'jgg-stars');
@@ -218,7 +227,7 @@
     function view() {
       if (!current) { mount.replaceChildren(); mount.hidden = true; return; }
       mount.hidden = false;
-      var who = el('b', '', current), change = el('button', 'jgg-change', 'change');
+      var who = el('b', 'jgg-name', current), change = el('button', 'jgg-change', 'change');
       change.type = 'button';
       change.addEventListener('click', edit);
       mount.replaceChildren('Playing as ', who, ' · ', change);
@@ -243,5 +252,96 @@
     view();
   }
 
-  window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, playingAs: playingAs, hubUrl: hubUrl, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
+  // --- motion: docs/motion-system.md. Same values as the --jgg-* tokens; reduce motion = a short fade ---
+  var T = { exit: 160, enter: 220, reveal: 320 };
+  var FROM = { enter: 'translateY(6px) scale(.98)', reveal: 'translateY(10px) scale(.96)', exit: 'translateY(-4px) scale(.98)' };
+  function reduced() {
+    try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+  }
+  // Resolves true when finished, false when a newer transition on el cancelled it. A transition that interrupts
+  // another starts from where that one had got to (retargets), not from its first frame.
+  function play(el, kind, delay) {
+    if (!el || !el.animate) return Promise.resolve(true);
+    var calm = reduced(), out = kind === 'exit', a = { opacity: +out }, b = { opacity: +!out };
+    if (!calm) { a.transform = out ? 'none' : FROM[kind]; b.transform = out ? FROM.exit : 'none'; }
+    if (el._jgg) {
+      if (el._jgg.playState === 'running') { var cs = getComputedStyle(el); a = { opacity: cs.opacity }; if (!calm) a.transform = cs.transform; delay = 0; }
+      el._jgg.cancel();
+    }
+    var anim = el._jgg = el.animate([a, b], { duration: calm ? T.exit : T[kind], delay: calm ? 0 : delay || 0,
+      easing: calm ? 'ease' : 'cubic-bezier(.23,1,.32,1)', fill: out ? 'forwards' : 'backwards' });
+    return anim.finished.then(function () { return true; }, function () { return false; });
+  }
+  function enter(el, opts) {
+    if (!el) return Promise.resolve(true);
+    el.hidden = false;
+    return play(el, (opts && opts.kind) || 'enter', opts && opts.delay);
+  }
+  function exit(el) {
+    if (!el || el.hidden) return Promise.resolve(true);
+    return play(el, 'exit').then(function (done) {
+      if (done) { el.hidden = true; el._jgg.cancel(); el._jgg = null; } // drop the held opacity: 0
+      return done;
+    });
+  }
+  // Phase change: the old screen goes at once (the system's response snaps) and the new one enters, so the change
+  // takes 220 ms and never shows two screens or moves the old one out of its layout.
+  function swap(from, to) {
+    if (from && from !== to) { if (from._jgg) { from._jgg.cancel(); from._jgg = null; } from.hidden = true; }
+    return enter(to);
+  }
+  // scrollIntoView that respects reduce motion (instant instead of smooth).
+  function scroll(el, opts) {
+    if (!el) return;
+    var o = { block: 'start' };
+    for (var k in opts) o[k] = opts[k];
+    o.behavior = reduced() ? 'auto' : 'smooth';
+    el.scrollIntoView(o);
+  }
+  function reveal(els, opts) {
+    var gap = opts && opts.stagger != null ? opts.stagger : 50;
+    return Promise.all(Array.prototype.map.call(els.length != null ? els : [els], function (el, i) {
+      return enter(el, { kind: 'reveal', delay: Math.min(i, 6) * gap }); // never hold rows back long
+    }));
+  }
+  // Counts el up to `to` (ease-out cubic). Never await it before showing anything else. Any tap or key jumps
+  // straight to the final value. Screen readers get the final value at once from a hidden copy; the ticking
+  // number is hidden from them.
+  function settle(el, to, opts) {
+    opts = opts || {};
+    var from = opts.from || 0, ms = opts.duration || 700, start, fmt = opts.format || function (v) { return String(Math.round(v)); };
+    var final = fmt(to);
+    if (!el) return Promise.resolve();
+    if (el._jggSkip) el._jggSkip();
+    if (reduced() || from === to) { el.textContent = final; return Promise.resolve(); }
+    var hid = el.getAttribute('aria-hidden'), sr = document.createElement('span');
+    sr.textContent = final;
+    sr.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
+    el.setAttribute('aria-hidden', 'true');
+    if (el.parentNode) el.parentNode.insertBefore(sr, el.nextSibling);
+    return new Promise(function (resolve) {
+      function done() {
+        cancelAnimationFrame(el._jggN);
+        removeEventListener('pointerdown', done, true); removeEventListener('keydown', done, true);
+        el._jggSkip = null; el.textContent = final; sr.remove();
+        if (hid === null) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', hid);
+        resolve();
+      }
+      el._jggSkip = done;
+      addEventListener('pointerdown', done, true); addEventListener('keydown', done, true);
+      el._jggN = requestAnimationFrame(function frame(now) {
+        var t = Math.min(1, (now - (start = start || now)) / ms);
+        if (t >= 1) return done();
+        el.textContent = fmt(from + (to - from) * (1 - Math.pow(1 - t, 3)));
+        el._jggN = requestAnimationFrame(frame);
+      });
+    });
+  }
+
+  // iOS Safari shows :active press states only when some touchstart listener exists.
+  try { document.addEventListener('touchstart', function () {}, { passive: true }); } catch (e) { /* old browser */ }
+
+  var motion = { reduced: reduced, enter: enter, exit: exit, swap: swap, reveal: reveal, settle: settle, scroll: scroll };
+
+  window.JGG = { level: level, levelChip: levelChip, rate: rate, name: name, setName: setName, playingAs: playingAs, hubUrl: hubUrl, motion: motion, LEVELS: LEVELS, WEEKDAYS: WEEKDAYS };
 })();
