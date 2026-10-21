@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7fb">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0c10">
+  <meta name="color-scheme" content="dark light">
+  <title>Play together · jacob.gg</title>
+  <meta name="description" content="Play the jacob.gg daily games live with family and friends: one room code, the same game at the same time, a shared scoreboard.">
+  <link rel="stylesheet" href="../kit/jgg.css">
+  <style>
+    html { -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; } /* layout classes (flex) must not undo hidden */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.25rem; }
+    h1 { margin: .2rem 0 .4rem; font-size: clamp(1.5rem, 6vw, 2rem); letter-spacing: -.02em; }
+    h2 { margin: 0 0 .6rem; font-size: 1.05rem; }
+    .eyebrow { margin: 0; font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+    .stack { display: flex; flex-direction: column; gap: .75rem; }
+    label.field { display: flex; flex-direction: column; gap: .3rem; font-size: .9rem; color: var(--muted); }
+    input, select { font: inherit; font-size: max(16px, 1rem); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: .65rem .8rem; min-width: 0; }
+    input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #code-in { text-transform: uppercase; letter-spacing: .3em; font-weight: 700; font-size: 1.4rem; text-align: center; width: 100%; }
+    button { font: inherit; cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+    .btn { padding: .75rem 1.1rem; border-radius: 12px; border: 0; background: var(--accent); color: #fff; font-weight: 650;
+      transition: transform 80ms var(--jgg-ease-out), opacity var(--jgg-t-hover) ease; }
+    .btn.ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn:active:not(:disabled) { transform: scale(.97); transition-duration: var(--jgg-t-press), var(--jgg-t-hover); }
+    .wide { width: 100%; }
+    .error { color: var(--bad); margin: 0; min-height: 1.2em; font-size: .9rem; overflow-wrap: anywhere; }
+
+    .code { font-size: 2.6rem; font-weight: 800; letter-spacing: .25em; margin: .2rem 0; font-variant-numeric: tabular-nums; }
+    .players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+    .players li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: .6rem; align-items: center;
+      padding: .5rem .7rem; border-radius: 10px; background: var(--surface-2); }
+    .dot { width: .7rem; height: .7rem; border-radius: 50%; background: var(--border); transition: background-color var(--jgg-t-hover) ease; }
+    .dot.on { background: var(--muted); } .dot.playing { background: var(--warn); } .dot.locked { background: var(--good); }
+    .pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ptag { font-size: .78rem; color: var(--muted); white-space: nowrap; }
+    .pts { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kick { background: none; border: 0; color: var(--muted); padding: .2rem .4rem; border-radius: 6px; }
+    .kick:active { background: var(--border); }
+
+    .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: .5rem; }
+    .game { display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: .7rem .4rem; border-radius: 12px;
+      background: var(--surface-2); border: 2px solid transparent; color: var(--text);
+      transition: transform 80ms var(--jgg-ease-out), border-color var(--jgg-t-hover) ease; }
+    .game .em { font-size: 1.5rem; line-height: 1; }
+    .game[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+    .game:active { transform: scale(.97); transition-duration: var(--jgg-t-press), var(--jgg-t-hover); }
+    .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+    .seg button { border: 0; background: none; color: var(--muted); padding: .45rem .8rem; border-radius: 8px; font-weight: 600; }
+    .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / .2); }
+
+    .results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+    .results li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto auto; gap: .6rem; align-items: center;
+      padding: .55rem .7rem; border-radius: 10px; background: var(--surface-2); }
+    .results .rk { font-weight: 800; color: var(--muted); text-align: center; }
+    .results .sc { font-variant-numeric: tabular-nums; }
+    .results .plus { font-weight: 700; color: var(--good); font-variant-numeric: tabular-nums; }
+    .flag { font-size: .75rem; color: var(--warn); display: block; }
+
+    /* the game, full screen, under a slim room bar */
+    #s-play { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; background: var(--bg); }
+    #s-play[hidden] { display: none; }
+    .bar { display: flex; align-items: center; gap: .6rem; padding: max(.45rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) .45rem max(.75rem, env(safe-area-inset-left));
+      background: var(--surface); border-bottom: 1px solid var(--border); font-size: .9rem; }
+    .bar .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar .timer { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .bar .btn { padding: .4rem .7rem; font-size: .85rem; }
+    .minidots { display: flex; gap: 3px; }
+    .minidots .dot { width: .55rem; height: .55rem; }
+    #frame { flex: 1; width: 100%; border: 0; background: var(--bg); }
+    .waiting { padding: .55rem .9rem; background: var(--accent-soft); color: var(--text); font-size: .9rem; text-align: center; }
+
+    #countdown { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 92%, transparent); }
+    #countdown[hidden] { display: none; }
+    #cd-n { font-size: 7rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    #cd-game { margin-top: .5rem; text-align: center; color: var(--muted); }
+    @media (prefers-reduced-motion: reduce) { .btn:active, .game:active { transform: none; opacity: .85; } }
+  </style>
+  <script src="../kit/jgg.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead"><a class="wordmark" href="../">jacob<span>.gg</span></a></header>
+
+    <section class="card stack" id="s-home">
+      <div>
+        <p class="eyebrow">Play together</p>
+        <h1>Same game, same time</h1>
+        <p class="muted" style="margin:0">One person makes a room and shares the code. Everyone plays the game the host picks, on their own phone, and a scoreboard keeps count.</p>
+      </div>
+      <label class="field">Your name <input id="nick" maxlength="20" autocomplete="nickname" autocapitalize="words" enterkeyhint="done"></label>
+      <button class="btn wide" id="create">Make a room</button>
+      <div class="row" style="justify-content:center;color:var(--muted)">or join one</div>
+      <label class="field">Room code <input id="code-in" maxlength="4" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" inputmode="text" placeholder="ABCD"></label>
+      <div class="row"><button class="btn ghost" style="flex:1" id="join">Join</button><button class="btn ghost" id="watch">Just watch</button></div>
+      <p class="error" id="home-err" role="alert"></p>
+    </section>
+
+    <section class="card stack" id="s-lobby" hidden>
+      <div>
+        <p class="eyebrow">Room code</p>
+        <div class="row" style="justify-content:space-between">
+          <div class="code" id="code"></div>
+          <button class="btn ghost" id="share">Invite</button>
+        </div>
+        <p class="muted" style="margin:0" id="lobby-note"></p>
+      </div>
+      <div>
+        <h2>Players</h2>
+        <ul class="players" id="players"></ul>
+      </div>
+      <div class="stack" id="picker" hidden>
+        <h2 style="margin:0">Pick the next game</h2>
+        <div class="games" id="games"></div>
+        <div class="row">
+          <div class="seg" id="mode"><button data-m="daily" aria-pressed="true">Today's</button><button data-m="archive" aria-pressed="false">Archive day</button></div>
+          <input type="date" id="date" hidden aria-label="Archive day">
+        </div>
+        <p class="muted" id="mode-note" style="margin:0;font-size:.85rem"></p>
+        <div class="row">
+          <label class="field" style="flex:1">Time limit <select id="mins"></select></label>
+          <label class="field" style="flex:1">Scoring <select id="scoring"><option value="rank">Places (5, 3, 2, 1)</option><option value="raw">Add up scores</option></select></label>
+        </div>
+        <div class="row"><button class="btn" style="flex:1" id="start" disabled>Start</button><button class="btn ghost" id="surprise">Surprise me</button></div>
+      </div>
+      <p class="muted" id="wait-host" hidden style="margin:0">Waiting for the host to pick a game…</p>
+      <button class="btn ghost" id="leave">Leave room</button>
+      <p class="error" id="lobby-err" role="alert"></p>
+    </section>
+
+    <section class="card stack" id="s-reveal" hidden>
+      <div>
+        <p class="eyebrow" id="rv-eyebrow">Round</p>
+        <h1 id="rv-title">Results</h1>
+      </div>
+      <ol class="results" id="rv-results"></ol>
+      <div>
+        <h2>Scoreboard</h2>
+        <ol class="results" id="rv-board"></ol>
+      </div>
+      <div class="row" id="rv-host" hidden><button class="btn" style="flex:1" id="next">Next game</button><button class="btn ghost" id="endroom">End room</button></div>
+      <p class="muted" id="rv-wait" hidden style="margin:0">The host is picking the next game…</p>
+    </section>
+  </main>
+
+  <div id="s-play" hidden>
+    <div class="bar">
+      <span class="grow" id="play-title"></span>
+      <span class="minidots" id="minidots" aria-hidden="true"></span>
+      <span class="timer" id="timer" aria-live="off"></span>
+      <button class="btn ghost" id="force" hidden>Reveal now</button>
+    </div>
+    <div class="waiting" id="play-wait" hidden>Done! Waiting for the others…</div>
+    <iframe id="frame" title="Game" allow="camera; microphone; geolocation; accelerometer; gyroscope; magnetometer; fullscreen; clipboard-write; web-share"></iframe>
+  </div>
+  <div id="countdown" hidden><div><div id="cd-n">3</div><div id="cd-game"></div></div></div>
+
+  <script type="module">
+    const Q = new URLSearchParams(location.search);
+    const API = (Q.get('rooms') || 'https://jgg-rooms.jacob-gg-leaderboard-worker.workers.dev').replace(/\/+$/, '');
+    const SITE = location.pathname.replace(/\/jacob\.gg\/play\/.*$/, '/'); // games live next to the hub
+    // Games and where their finished score shows. "archive" is the URL parameter for a past day, if the game has one.
+    const GAMES = [
+      { id: 'factle', name: 'Factle', em: '🔎', min: 4, archive: 'day', done: '#done', score: '#daily-score' },
+      { id: 'perceptle', name: 'Perceptle', em: '👁️', min: 6, done: '#done', score: '#daily-score' },
+      { id: 'stratle', name: 'Stratle', em: '📊', min: 5, archive: 'day', done: '#done', score: '#daily-score' },
+      { id: 'describle', name: 'Describle', em: '💬', min: 6, archive: 'day', done: '#done', score: '#score' },
+      { id: 'pointle', name: 'Pointle', em: '🌍', min: 5, done: '#done', score: '#done-total' },
+      { id: 'predictle', name: 'Predictle', em: '🎯', min: 5, archive: 'date', done: '.attempts', score: '.attempts .score' },
+      { id: 'yogle', name: 'Yogle', em: '🧘', min: 4, archive: 'date', done: '#screen-result', score: '#result-score' },
+      { id: 'ridd-le', name: 'ridd-le', em: '❓', min: 8, done: '#attempts-done', score: '#daily-score' },
+    ];
+    const $ = (id) => document.getElementById(id);
+    const M = () => window.JGG?.motion;
+    const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+      set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }, del: (k) => { try { localStorage.removeItem(k); } catch {} } };
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const fmt = (n) => Number.isInteger(n) ? String(n) : n.toFixed(1);
+
+    let ws = null, you = null, room = null, code = null, offset = 0, retry = 0, wantRole = 'player';
+    let pick = { game: null, mode: 'daily' }, playing = null, timerId = null, watchId = null, lastReveal = null;
+    const now = () => Date.now() + offset;
+
+    function show(id) {
+      for (const s of ['s-home', 's-lobby', 's-reveal']) if (s !== id) $(s).hidden = true;
+      const el = $(id);
+      if (el.hidden) M() ? M().enter(el) : (el.hidden = false);
+    }
+    function err(where, msg) { $(where).textContent = msg || ''; }
+
+    // ---------- home ----------
+    $('nick').value = store.get('jgg:room:nick') || window.JGG?.name?.() || '';
+    addEventListener('load', () => { if (!$('nick').value) $('nick').value = window.JGG?.name?.() || ''; });
+    if (Q.get('room')) $('code-in').value = Q.get('room').toUpperCase().slice(0, 4);
+    const nick = () => { const n = $('nick').value.replace(/\s+/g, ' ').trim().slice(0, 20); if (n) store.set('jgg:room:nick', n); return n; };
+
+    $('create').onclick = async () => {
+      if (!nick()) { $('nick').focus(); return err('home-err', 'Pick a name first.'); }
+      $('create').disabled = true; err('home-err');
+      try {
+        const r = await fetch(`${API}/api/rooms`, { method: 'POST', body: '{}' });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Could not make a room');
+        store.set(`jgg:room:${j.code}`, j.hostToken);
+        connect(j.code, 'player');
+      } catch (e) { err('home-err', e.message === 'Failed to fetch' ? 'Could not reach the room server. Check your connection.' : e.message); }
+      $('create').disabled = false;
+    };
+    const joinWith = (role) => {
+      const c = $('code-in').value.toUpperCase().replace(/\s+/g, '');
+      if (c.length !== 4) { $('code-in').focus(); return err('home-err', 'Room codes are 4 letters and numbers.'); }
+      if (role === 'player' && !nick()) { $('nick').focus(); return err('home-err', 'Pick a name first.'); }
+      err('home-err'); connect(c, role);
+    };
+    $('join').onclick = () => joinWith('player');
+    $('watch').onclick = () => joinWith('spectator');
+    $('code-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinWith('player'); });
+
+    // ---------- connection ----------
+    function connect(c, role) {
+      code = c; wantRole = role;
+      store.set('jgg:room:last', c);
+      const url = `${API.replace(/^http/, 'ws')}/api/rooms/${c}/ws`;
+      ws = new WebSocket(url);
+      ws.onopen = () => { retry = 0; ws.send(JSON.stringify({ t: 'hello', nickname: nick(), role, token: store.get(`jgg:room:${c}`) || undefined })); };
+      ws.onmessage = (e) => onMessage(JSON.parse(e.data));
+      ws.onclose = (e) => {
+        if (e.code === 4404 || e.code === 4000 || e.code === 4001 || e.code === 4403 || e.code === 4409) return gone(e.code);
+        if (!code) return;
+        if (retry === 0 && !you) return gone(4404); // never got in: wrong code
+        setTimeout(() => code && connect(code, wantRole), Math.min(8000, 500 * 2 ** retry++)); // dropped: come back to the same slot
+      };
+    }
+    function gone(why) {
+      const msg = { 4404: 'That room doesn\'t exist (or it has ended).', 4409: 'That room is full.', 4403: 'The host removed you from the room.',
+        4000: 'The host ended the room.', 4001: 'The room expired.' }[why] || 'Disconnected.';
+      leave(false); err('home-err', msg);
+    }
+    function leave(clear = true) {
+      const c = code; code = null; you = null; room = null;
+      try { ws?.close(); } catch {}
+      stopPlay(); $('countdown').hidden = true;
+      if (clear && c) store.del(`jgg:room:${c}`);
+      history.replaceState(null, '', location.pathname + (Q.get('rooms') ? `?rooms=${encodeURIComponent(Q.get('rooms'))}` : ''));
+      show('s-home');
+    }
+    $('leave').onclick = () => leave(true);
+    const send = (m) => ws?.readyState === 1 && ws.send(JSON.stringify(m));
+
+    function onMessage(m) {
+      if (m.serverNow) offset = m.serverNow - Date.now();
+      if (m.t === 'welcome') {
+        you = m.you; room = m.room;
+        store.set(`jgg:room:${code}`, you.token);
+        history.replaceState(null, '', `${location.pathname}?room=${code}${Q.get('rooms') ? `&rooms=${encodeURIComponent(Q.get('rooms'))}` : ''}`);
+        render();
+        if (room.phase === 'playing' && room.round && !m.lockedIn && you.role === 'player' && now() < room.round.endsAt) startPlay(room.round);
+      } else if (m.t === 'room') { room = m.room; render(); }
+      else if (m.t === 'presence') { const p = room?.players.find((x) => x.slot === m.slot); if (p) { p.presence = { state: m.state, p: m.p }; renderDots(); renderPlayers(); } }
+      else if (m.t === 'countdown') countdown(m);
+      else if (m.t === 'reveal') reveal(m);
+      else if (m.t === 'error') {
+        const t = { 'host-only': 'Only the host can do that.', 'pick-first': 'Pick a game first.', 'round-running': 'A round is running.', 'bad-date': 'Pick a past day.', full: 'That room is full.' }[m.code];
+        if (t) err(room ? 'lobby-err' : 'home-err', t);
+      } else if (m.t === 'closed') gone(4000);
+    }
+
+    // ---------- lobby ----------
+    const isHost = () => !!you?.host;
+    function render() {
+      if (!room || !you) return;
+      if (room.phase === 'revealed' && lastReveal && !$('s-reveal').hidden) { renderBoard(); renderRevealButtons(); return; }
+      if (room.phase === 'playing') { renderDots(); return; }
+      $('code').textContent = room.code;
+      $('lobby-note').textContent = you.role === 'spectator' ? 'You\'re watching.' : isHost() ? 'You\'re the host. Share the code, then pick a game.' : 'Share the code to bring more people in.';
+      $('picker').hidden = !isHost();
+      $('wait-host').hidden = isHost();
+      renderPlayers();
+      if (isHost()) renderPicker();
+      if ($('s-lobby').hidden && (room.phase === 'lobby' || room.phase === 'picked' || (room.phase === 'revealed' && !lastReveal))) show('s-lobby');
+    }
+    function renderPlayers() {
+      if (!room) return;
+      const ps = [...room.players].sort((a, b) => (b.role === 'player') - (a.role === 'player') || b.total - a.total || a.slot - b.slot);
+      $('players').innerHTML = ps.map((p) => {
+        const st = !p.online ? '' : room.phase === 'playing' ? (p.presence?.state === 'locked' ? 'locked' : 'playing') : 'on';
+        const tag = [p.host && 'host', p.role === 'spectator' && 'watching', !p.online && 'away', p.slot === you.slot && 'you'].filter(Boolean).join(' · ');
+        return `<li><span class="dot ${st}" title="${st || 'away'}"></span><span class="pname" title="${esc(p.nickname)}" dir="auto">${esc(p.nickname)}</span>
+          <span class="ptag">${tag}</span><span class="pts">${p.role === 'player' ? fmt(p.total) : ''}${isHost() && !p.host ? ` <button class="kick" data-slot="${p.slot}" aria-label="Remove ${esc(p.nickname)}">✕</button>` : ''}</span></li>`;
+      }).join('');
+    }
+    $('players').addEventListener('click', (e) => { const b = e.target.closest('.kick'); if (b && confirm('Remove this player?')) send({ t: 'kick', slot: +b.dataset.slot }); });
+
+    const today = () => new Date(now()).toISOString().slice(0, 10);
+    function renderPicker() {
+      $('games').innerHTML = GAMES.map((g) => `<button class="game" data-g="${g.id}" aria-pressed="${pick.game === g.id}"><span class="em">${g.em}</span>${g.name}</button>`).join('');
+      const g = GAMES.find((x) => x.id === pick.game);
+      const canArchive = !!g?.archive;
+      if (!canArchive && pick.mode === 'archive') pick.mode = 'daily';
+      for (const b of $('mode').children) { b.setAttribute('aria-pressed', String(b.dataset.m === pick.mode)); if (b.dataset.m === 'archive') b.disabled = g ? !canArchive : false; }
+      $('date').hidden = pick.mode !== 'archive';
+      const y = new Date(new Date(today()).getTime() - 864e5).toISOString().slice(0, 10);
+      $('date').max = y; if (!$('date').value) $('date').value = y;
+      $('mode-note').textContent = g && !canArchive ? `${g.name} plays today's puzzle only here.` : '';
+      if (!$('mins').options.length || $('mins').dataset.g !== pick.game) {
+        const def = g?.min ?? 5;
+        $('mins').innerHTML = [2, 3, 4, 5, 6, 8, 10, 15, 20].map((n) => `<option value="${n}" ${n === def ? 'selected' : ''}>${n} minutes</option>`).join('');
+        $('mins').dataset.g = pick.game ?? '';
+      }
+      $('scoring').value = room.scoring;
+      $('start').disabled = !pick.game;
+    }
+    $('games').addEventListener('click', (e) => { const b = e.target.closest('.game'); if (b) { pick.game = b.dataset.g; renderPicker(); } });
+    $('mode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !b.disabled) { pick.mode = b.dataset.m; renderPicker(); } });
+    $('scoring').onchange = () => send({ t: 'settings', scoring: $('scoring').value });
+    $('surprise').onclick = () => { pick = { game: GAMES[Math.floor(Math.random() * GAMES.length)].id, mode: 'daily' }; renderPicker(); };
+    $('start').onclick = () => {
+      if (!pick.game) return;
+      err('lobby-err');
+      send({ t: 'pick', game: pick.game, mode: pick.mode, date: pick.mode === 'archive' ? $('date').value : undefined, durationSec: +$('mins').value * 60 });
+      send({ t: 'start' });
+    };
+    $('share').onclick = async () => {
+      const url = `${location.origin}${location.pathname}?room=${room.code}`;
+      const text = `Join my jacob.gg room: ${room.code}`;
+      try { if (navigator.share) return await navigator.share({ title: 'Play together', text, url }); } catch (e) { if (e.name === 'AbortError') return; }
+      try { await navigator.clipboard.writeText(`${text} ${url}`); $('share').textContent = 'Link copied'; setTimeout(() => ($('share').textContent = 'Invite'), 1800); }
+      catch { prompt('Copy this link:', url); }
+    };
+
+    // ---------- round ----------
+    function countdown(m) {
+      const g = GAMES.find((x) => x.id === m.round.game);
+      $('cd-game').textContent = `${g?.name ?? m.round.game} · ${m.round.mode === 'archive' ? m.round.date : 'today'}`;
+      $('countdown').hidden = false;
+      let shown = null;
+      const tick = () => {
+        const left = Math.ceil((m.startsAt - now()) / 1000);
+        if (left <= 0) { $('countdown').hidden = true; if (you.role === 'player') startPlay(m.round); else spectate(m.round); return; }
+        if (left !== shown) { shown = left; $('cd-n').textContent = left; const el = $('cd-n'); el.animate && !M()?.reduced() && el.animate([{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.23,1,.32,1)' }); }
+        requestAnimationFrame(tick);
+      };
+      tick();
+    }
+    function gameUrl(round) {
+      const g = GAMES.find((x) => x.id === round.game);
+      const qs = round.mode === 'archive' && g?.archive ? `?${g.archive}=${round.date}` : '';
+      return `${SITE}${round.game}/${qs}`;
+    }
+    function startPlay(round) {
+      const g = GAMES.find((x) => x.id === round.game);
+      playing = { round, g, frameLoadedAt: null, firstDoneAt: null, locked: false };
+      $('frame').onload = () => { if (playing) playing.frameLoadedAt = now(); };
+      $('play-title').textContent = `${g?.em ?? ''} ${g?.name ?? round.game}${round.mode === 'archive' ? ' · ' + round.date : ''}`;
+      $('force').hidden = !isHost();
+      $('play-wait').hidden = true;
+      $('frame').src = gameUrl(round);
+      $('s-play').hidden = false;
+      document.documentElement.style.overflow = 'hidden';
+      renderDots();
+      clearInterval(timerId); timerId = setInterval(tickTimer, 250); tickTimer();
+      clearInterval(watchId); watchId = setInterval(watchGame, 500);
+    }
+    function spectate(round) { startPlay(round); playing.spectator = true; $('play-wait').hidden = false; $('play-wait').textContent = 'You\'re watching: results appear when everyone has finished.'; }
+    function stopPlay() {
+      clearInterval(timerId); clearInterval(watchId); playing = null;
+      $('s-play').hidden = true; $('frame').src = 'about:blank';
+      document.documentElement.style.overflow = '';
+    }
+    function tickTimer() {
+      if (!playing) return;
+      const left = Math.max(0, Math.round((playing.round.endsAt - now()) / 1000));
+      $('timer').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    }
+    function renderDots() {
+      if (!room) return;
+      $('minidots').innerHTML = room.players.filter((p) => p.role === 'player' && p.online)
+        .map((p) => `<span class="dot ${p.presence?.state === 'locked' ? 'locked' : 'playing'}" title="${esc(p.nickname)}"></span>`).join('');
+    }
+    $('force').onclick = () => send({ t: 'reveal' });
+
+    // The game is a page on the same site, so its finished score can be read straight off its results screen.
+    let stable = { v: null, since: 0 };
+    function watchGame() {
+      if (!playing || playing.locked || playing.spectator) return;
+      let doc; try { doc = $('frame').contentDocument; } catch { return; }
+      const g = playing.g; if (!doc || !g) return;
+      const done = doc.querySelector(g.done), el = doc.querySelector(g.score);
+      if (!done || !el || done.hidden || done.closest('[hidden]') || !done.getClientRects().length) { stable = { v: null, since: 0 }; return; }
+      if (playing.firstDoneAt === null) playing.firstDoneAt = now();
+      if (el.getAttribute('aria-hidden') === 'true') return; // still counting up
+      const v = parseFloat(String(el.textContent).replace(/[^\d.\-]/g, ''));
+      if (!Number.isFinite(v)) return;
+      if (stable.v !== v) { stable = { v, since: now() }; return; }
+      if (now() - stable.since < 1200) return;
+      playing.locked = true;
+      // results already showing as the page loaded: this person had played it before
+      const already = playing.frameLoadedAt !== null && playing.firstDoneAt - playing.frameLoadedAt < 1500;
+      send({ t: 'lockin', score: v, payload: { already } });
+      $('play-wait').textContent = already ? 'You\'d already played this one, so that score counts. Waiting for the others…' : 'Done! Waiting for the others…';
+      $('play-wait').hidden = false;
+    }
+
+    function reveal(m) {
+      lastReveal = m;
+      stopPlay(); $('countdown').hidden = true;
+      const g = GAMES.find((x) => x.id === m.round.game);
+      $('rv-eyebrow').textContent = `Round ${m.round.no} · ${g?.name ?? m.round.game}${m.round.mode === 'archive' ? ' · ' + m.round.date : ''}`;
+      $('rv-title').textContent = m.results.length ? `${m.results[0].nickname} wins the round` : 'Nobody finished in time';
+      $('rv-results').innerHTML = m.results.map((r, i) => `<li><span class="rk">${i + 1}</span><span class="pname" dir="auto" title="${esc(r.nickname)}">${esc(r.nickname)}
+        ${r.payload?.already ? '<span class="flag">already played</span>' : ''}${r.flags?.length ? `<span class="flag">${r.flags.join(', ')}</span>` : ''}</span>
+        <span class="sc">${fmt(r.score)}</span><span class="plus">+${fmt(r.points)}</span></li>`).join('') || '<li><span></span><span class="muted">No scores this round.</span></li>';
+      renderBoard(); renderRevealButtons();
+      show('s-reveal');
+      M()?.reveal($('rv-results').children);
+    }
+    function renderBoard() {
+      if (!room) return;
+      const ps = room.players.filter((p) => p.role === 'player').sort((a, b) => b.total - a.total);
+      $('rv-board').innerHTML = ps.map((p, i) => `<li><span class="rk">${i + 1}</span><span class="pname" dir="auto">${esc(p.nickname)}</span><span></span><span class="pts">${fmt(p.total)}</span></li>`).join('');
+    }
+    function renderRevealButtons() { $('rv-host').hidden = !isHost(); $('rv-wait').hidden = isHost(); }
+    $('next').onclick = () => { lastReveal = null; pick.game = null; show('s-lobby'); render(); };
+    $('endroom').onclick = () => { if (confirm('End the room for everyone?')) send({ t: 'end' }); };
+
+    // Rejoin after a refresh: the saved token puts you back in your slot.
+    const resume = Q.get('room') && store.get(`jgg:room:${Q.get('room').toUpperCase()}`);
+    if (resume) connect(Q.get('room').toUpperCase(), 'player');
+  </script>
+</body>
+</html>

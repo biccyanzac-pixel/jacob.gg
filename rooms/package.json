@@ -1,0 +1,11 @@
+{
+  "name": "jgg-rooms",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "../worker/node_modules/.bin/wrangler dev --local --port 8861",
+    "deploy": "../worker/node_modules/.bin/wrangler deploy",
+    "test": "node --test test/logic.test.mjs",
+    "test:live": "node test/clients.mjs"
+  }
+}

@@ -1,0 +1,22 @@
+# jacob.gg "Play together" room server (Workers Free: SQLite-backed Durable Objects only).
+# Local: npm run dev (port 8861). Deploy only with the owner's go-ahead: npm run deploy.
+name = "jgg-rooms"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://biccyanzac-pixel.github.io,http://localhost:8083,http://localhost:8099"
+# a family on one home Wi-Fi shares an IP, and reconnects count as joins
+JOIN_LIMIT = "60"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "Room"
+
+[[durable_objects.bindings]]
+name = "GATE"
+class_name = "Gate"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room", "Gate"]

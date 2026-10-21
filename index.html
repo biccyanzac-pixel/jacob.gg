@@ -61,6 +61,13 @@
       font-size: .95rem;
     }
     .today[hidden] { display: none; }
+    .together {
+      display: inline-block; margin-top: 16px; padding: 10px 18px; border-radius: 999px; font-weight: 650;
+      background: var(--ink); color: var(--bg); text-decoration: none;
+      transition: transform 80ms var(--jgg-ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+    }
+    .together:active { transform: scale(.97); transition-duration: var(--jgg-t-press, 120ms); }
+    .together:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     .level-text { font-weight: 650; }
     .week { display: flex; align-items: flex-end; gap: 4px; height: 26px; margin: 0; padding: 0; list-style: none; }
     .week li {
@@ -120,6 +127,7 @@
       <h1>jacob.gg</h1>
       <p>Little daily games. Everyone gets the same puzzle each day.<br>
         Next puzzles in <span id="clock">--:--:--</span>.</p>
+      <a class="together" href="play/">Play together with family or friends &rarr;</a>
       <div class="today" id="today">
         <span class="level-text" id="level"></span>
         <ol class="week" id="week" aria-hidden="true"></ol>
