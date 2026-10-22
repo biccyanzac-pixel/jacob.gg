@@ -23,6 +23,7 @@ The hub page for the daily games: **https://biccyanzac-pixel.github.io/jacob.gg/
 | Stratle | [biccyanzac-pixel/stratle](https://github.com/biccyanzac-pixel/stratle) | https://biccyanzac-pixel.github.io/stratle/ |
 | Describle | [biccyanzac-pixel/describle](https://github.com/biccyanzac-pixel/describle) | https://biccyanzac-pixel.github.io/describle/ |
 | Lettrle | [biccyanzac-pixel/lettrle](https://github.com/biccyanzac-pixel/lettrle) | https://biccyanzac-pixel.github.io/lettrle/ |
+| Groupyle | [biccyanzac-pixel/groupyle](https://github.com/biccyanzac-pixel/groupyle) | https://biccyanzac-pixel.github.io/groupyle/ |
 
 The hub page is a static `index.html`, served by GitHub Pages straight from `main`. It shows today's weekday
 difficulty, plays today and this week, and each game's plays and stars. Cards are ordered by plays and rating.
