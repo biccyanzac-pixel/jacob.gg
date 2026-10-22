@@ -10,9 +10,9 @@ const srv = await serve(8083);
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
 let failures = 0;
 const check = (label, ok, detail = '') => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '  ' + detail : ''}`); if (!ok) failures++; };
-const IDS = ['ridd-le', 'yogle', 'predictle', 'pointle', 'factle', 'perceptle', 'stratle', 'describle', 'lettrle'];
+const IDS = ['ridd-le', 'yogle', 'predictle', 'pointle', 'factle', 'perceptle', 'stratle', 'describle', 'lettrle', 'groupyle'];
 const STATS = {
-  huge: { plays: { today: 98765, week: 1234567, all: 987654321 }, games: IDS.map((id, i) => ({ id, plays: { all: [987654321, 1, 0, 10000, 999, 12345678, 2, 1001, 7][i] }, rating: i % 3 ? { votes: [0, 1, 4821, 12][i % 4], avg: [0, 5, 0.5, 3.25][i % 4] } : { votes: 0 } })) },
+  huge: { plays: { today: 98765, week: 1234567, all: 987654321 }, games: IDS.map((id, i) => ({ id, plays: { all: [987654321, 1, 0, 10000, 999, 12345678, 2, 1001, 7, 42][i] }, rating: i % 3 ? { votes: [0, 1, 4821, 12][i % 4], avg: [0, 5, 0.5, 3.25][i % 4] } : { votes: 0 } })) },
   zero: { plays: { today: 0, week: 0, all: 0 }, games: IDS.map((id) => ({ id, plays: { all: 0 }, rating: { votes: 0 } })) },
 };
 const NAMES = ['WWWWWWWWWWWWWWWWWWWW', 'Aleksandra Wiśniewska', '🦄🦄🦄🦄🦄🦄🦄🦄🦄🦄', 'محمد عبد الرحمن', '王小明', 'Jo'];

@@ -48,7 +48,7 @@ Run `npm run setup` again any time to pick up new games and other people's commi
 | Game list | this repo, `games.json` |
 | Leaderboard workers | each game's `worker/` → `https://<game>-leaderboard.jacob-gg-leaderboard-worker.workers.dev` |
 
-Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle, Stratle, Describle, Lettrle. All are listed in
+Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle, Stratle, Describle, Lettrle, Groupyle. All are listed in
 `games.json` (`games` = live, `inDevelopment` = not on the hub yet).
 
 Identity for every repo: `biccyanzac-pixel <285977456+biccyanzac-pixel@users.noreply.github.com>` (set it repo-locally).
@@ -150,7 +150,7 @@ Cloudflare Worker + D1, free plan, the same shape in every game (copy `perceptle
 - If the worker bundles site files (generators, schedules), redeploy the worker whenever they change.
 - Free-plan limits to respect: D1 allows 10 databases per account, and **all 10 are in use** (eight games, the hub,
   and `words-leaderboard`). A new game shares an existing database: word games add their own prefixed tables to
-  `words-leaderboard` (Lettrle uses `lettrle_*`), and never touch another game's tables. Also 5M rows read per day
+  `words-leaderboard` (Lettrle uses `lettrle_*`, Groupyle `groupyle_*`), and never touch another game's tables. Also 5M rows read per day
   and 50 queries per Worker invocation. Keep running totals rather than scanning every row.
 
 ## 6. Deploying
@@ -194,6 +194,7 @@ Decisions the owner has already made:
 | Stratle | 8084 | 8841 |
 | Describle | 8082 | 8812 |
 | Lettrle | 8085 | 8851 |
+| Groupyle | 8086 | 8871 |
 | Predictle | 8090 | 8798 |
 | ridd-le | 5173 (Vite dev), 4173 (preview) | 8787 |
 | jacob.gg hub | 8083 | 8831 |
@@ -232,6 +233,7 @@ Pick the next free pair for a new game and add it here.
 | Stratle | yes | yes | yes | yes | yes (name before play) | yes; crowd deepens Mon to Sun, Sunday deepest |
 | Describle | yes | yes | yes (on-time days) | yes | yes (name once, every attempt) | yes; concrete Mon→abstract Sat, Sunday a verb or adjective |
 | Lettrle | yes | yes | yes | yes | yes (name before play, every guess) | yes; common words Mon→rare Sat, Sunday six letters |
+| Groupyle | yes | yes | yes | yes | yes (name before play, every guess) | yes; obvious groups Mon→look-alikes and wordplay Sat, Sunday five groups |
 
 When a game is brought up to date, update this table.
 

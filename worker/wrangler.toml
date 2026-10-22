@@ -53,7 +53,7 @@ binding = "DB_DESCRIBLE"
 database_name = "describle-leaderboard"
 database_id = "7df914a0-5150-4a5a-a57f-7c541b34ebde"
 
-# Shared by the word games; each game's tables have its own prefix (Lettrle: lettrle_*).
+# Shared by the word games; each game's tables have its own prefix (Lettrle: lettrle_*, Groupyle: groupyle_*).
 [[d1_databases]]
 binding = "DB_WORDS"
 database_name = "words-leaderboard"

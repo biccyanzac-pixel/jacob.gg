@@ -21,4 +21,5 @@ export const SOURCES = {
   stratle:     { binding: 'DB_STRATLE',   sql: q('totals', 'last_at') },     // one row per player per day, made at the first answer
   describle:   { binding: 'DB_DESCRIBLE', sql: q('totals', 'last_at') },   // one row per player per day, made at the first attempt
   lettrle:     { binding: 'DB_WORDS',     sql: q('lettrle_games', 'started_at') }, // shared words-leaderboard D1; one row per player per day, made at the start
+  groupyle:    { binding: 'DB_WORDS',     sql: q('groupyle_games', 'started_at') }, // shared words-leaderboard D1; one row per player per day, made at the start
 };
