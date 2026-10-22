@@ -24,6 +24,7 @@ const ROOTS = {
   perceptle: path.join(GAMES, 'perceptle', 'site'),
   stratle: path.join(GAMES, 'stratle', 'site'),
   describle: path.join(GAMES, 'describle', 'site'),
+  lettrle: path.join(GAMES, 'lettrle', 'site'),
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp',

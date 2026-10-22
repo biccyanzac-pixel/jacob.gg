@@ -48,7 +48,7 @@ Run `npm run setup` again any time to pick up new games and other people's commi
 | Game list | this repo, `games.json` |
 | Leaderboard workers | each game's `worker/` → `https://<game>-leaderboard.jacob-gg-leaderboard-worker.workers.dev` |
 
-Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle, Stratle, Describle. All are listed in
+Live games: ridd-le, Yogle, Predictle, Pointle, Factle, Perceptle, Stratle, Describle, Lettrle. All are listed in
 `games.json` (`games` = live, `inDevelopment` = not on the hub yet).
 
 Identity for every repo: `biccyanzac-pixel <285977456+biccyanzac-pixel@users.noreply.github.com>` (set it repo-locally).
@@ -148,18 +148,40 @@ Cloudflare Worker + D1, free plan, the same shape in every game (copy `perceptle
   decided by the server's clock.
 - `ALLOWED_ORIGINS = "https://biccyanzac-pixel.github.io"`; local dev adds `http://localhost:<site port>`.
 - If the worker bundles site files (generators, schedules), redeploy the worker whenever they change.
-- Free-plan limits to respect: D1 allows 10 databases per account (9 are in use: eight games and the hub; one left), 5M rows
-  read per day, and 50 queries per Worker invocation. Keep running totals rather than scanning every row.
+- Free-plan limits to respect: D1 allows 10 databases per account, and **all 10 are in use** (eight games, the hub,
+  and `words-leaderboard`). A new game shares an existing database: word games add their own prefixed tables to
+  `words-leaderboard` (Lettrle uses `lettrle_*`), and never touch another game's tables. Also 5M rows read per day
+  and 50 queries per Worker invocation. Keep running totals rather than scanning every row.
 
 ## 6. Deploying
 
-- Game site: `git subtree split --prefix site -b gh-pages && git push -f origin gh-pages` (Predictle and ridd-le
-  differ, see their READMEs).
-- Game worker: `cd worker && npx wrangler deploy` (remote schema: `npm run db:init`, migrations as the game
-  documents).
-- Hub page and kit: commit and push `main` in this repo (GitHub Pages serves `main`; about a minute).
-- Hub worker: `cd worker && npx wrangler deploy`.
+The owner wants the agent to run the whole deploy when they ask for it (asked on 2026-10-22), rather than receive a
+list of commands. Before that, work on branches and open PRs. `gh` (signed in as biccyanzac-pixel) and
+`npx wrangler` (logged in to the Cloudflare account) are set up on the owner's PC.
+
+Order: the game first, then the hub, so the hub never links to a game that isn't live.
+
+1. Merge the game's PR: `gh pr merge <n> -R biccyanzac-pixel/<game> --merge`, then `git checkout main && git pull`.
+2. Game worker: `cd worker && npm run db:init` (remote schema, `CREATE TABLE IF NOT EXISTS`, safe to re-run), then
+   `npx wrangler deploy`. Migrations as the game documents.
+3. Game site: `git subtree split --prefix site -b gh-pages && git push -f origin gh-pages` (Predictle and ridd-le
+   differ, see their READMEs). A new repo needs GitHub Pages turned on once:
+   `gh api -X POST repos/biccyanzac-pixel/<game>/pages -f "source[branch]=gh-pages" -f "source[path]=/"`.
+4. Hub page and kit: merge the hub PR (or push `main`); GitHub Pages serves `main` in about a minute.
+   Hub worker: `cd worker && npx wrangler deploy`. Room server, if `rooms/` changed: `cd rooms && npm run deploy`.
+5. Check it live: the game and the hub load (`gh api repos/biccyanzac-pixel/<game>/pages/builds/latest` shows the
+   Pages build), the hub worker's `/api/health` lists the game, and the game worker's `GET /api/leaderboard` answers
+   with a CORS header for `https://biccyanzac-pixel.github.io`. Don't send test plays to a live worker: they would
+   land on the real board.
+
 - In PowerShell, pass commit messages with `git commit -F <file>`. Inline messages containing quotes get mangled.
+
+Decisions the owner has already made:
+- New game repos are public, like the others (`gh repo create biccyanzac-pixel/<game> --public`).
+- Answers being readable in the site's code (puzzles generated in the browser) is accepted.
+- "Launch today" means puzzle #1 is the launch day (`EPOCH` = that UTC day).
+- All 10 free D1s are in use, so a new game adds `<game>_*` tables to a shared database (word games:
+  `words-leaderboard`). Paid services still need the owner's OK first (section 2.8).
 
 ## 7. Local ports (don't reuse)
 
@@ -171,6 +193,7 @@ Cloudflare Worker + D1, free plan, the same shape in every game (copy `perceptle
 | Perceptle | 8082 | 8821 |
 | Stratle | 8084 | 8841 |
 | Describle | 8082 | 8812 |
+| Lettrle | 8085 | 8851 |
 | Predictle | 8090 | 8798 |
 | ridd-le | 5173 (Vite dev), 4173 (preview) | 8787 |
 | jacob.gg hub | 8083 | 8831 |
@@ -186,14 +209,15 @@ Pick the next free pair for a new game and add it here.
    move it to `games` at launch.
 2. `site/` with the page skeleton from section 3 and components copied from Perceptle. Day number from an `EPOCH`,
    countdown, the weekday curve (section 2.3), share text, archive, the rating box.
-3. `worker/` from the pattern in section 5. Create the D1 (`npx wrangler d1 create <game>-leaderboard`), apply the
-   schema, deploy, and put the URL in the site's config.
+3. `worker/` from the pattern in section 5. All 10 free D1s are in use, so use a shared one with `<game>_*` tables
+   (word games: `words-leaderboard`). Put the worker's URL
+   (`https://<game>-leaderboard.jacob-gg-leaderboard-worker.workers.dev`) in the site's config.
 4. Tests: determinism/golden days, worker API e2e, a headless-Chrome e2e at 360 px and desktop (Playwright with
    the system Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`).
 5. Hub: add the game to `games.json`, add a card (with `data-game="<id>"` and its own art and colour) to
    `index.html`, add its D1 binding to `worker/wrangler.toml` and its query to `worker/src/sources.js`, and add its
    display name to `NAMES` in `kit/jgg.js`. Redeploy the hub worker and push this repo. Update the README table.
-6. Deploy the game (section 6) and open it from the hub on a phone.
+6. When the owner asks for the deploy, run all of section 6 (game, then hub) and check it live.
 
 ## 9. Kit status per game
 
@@ -207,6 +231,7 @@ Pick the next free pair for a new game and add it here.
 | ridd-le | yes | no (no curve) | yes | yes (until the first attempt) | yes (every attempt) | no curve yet |
 | Stratle | yes | yes | yes | yes | yes (name before play) | yes; crowd deepens Mon to Sun, Sunday deepest |
 | Describle | yes | yes | yes (on-time days) | yes | yes (name once, every attempt) | yes; concrete Mon→abstract Sat, Sunday a verb or adjective |
+| Lettrle | yes | yes | yes | yes | yes (name before play, every guess) | yes; common words Mon→rare Sat, Sunday six letters |
 
 When a game is brought up to date, update this table.
 

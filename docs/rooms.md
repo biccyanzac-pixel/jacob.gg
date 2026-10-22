@@ -34,7 +34,9 @@ state change, or an hour after the host ends it.
 Client → server:
 - `hello {nickname, token?, role: 'player'|'spectator'}`, which must be first. Send back the saved `token` to reclaim
   the same slot and scores after a refresh or a dropped connection. The host connects with the `hostToken`.
-- `progress {p: 0..1, seq}`: live presence. It is never stored, and is ignored after locking in.
+- `progress {p: 0..1, seq, rows?}`: live presence. It is never stored, and is ignored after locking in. `rows` (word
+  games' colour rows, `g`/`y`/`x` only) is relayed in `presence` and kept after locking in; see
+  [room-contract.md](room-contract.md) for what games send.
 - `lockin {score, payload}`: once per round. The server timestamps it and flags implausible values (over the max,
   faster than `minSec`, before the start) without rejecting them.
 - `played {game, date, yes}`: the answer to a `check`.

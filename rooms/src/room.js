@@ -2,7 +2,7 @@
 // WebSockets use the Hibernation API, so an idle room costs no duration. Durable state (players, scores, the current
 // round, lock-ins) is one storage key written only on real changes; live presence (thinking / progress) is kept in
 // memory and in each socket's attachment, so 2 Hz progress updates never write storage.
-import { claimSlot, cleanNickname, makeSeed, plausibility, rankPoints, applyHandicap } from './logic.js';
+import { claimSlot, cleanNickname, cleanRows, makeSeed, plausibility, rankPoints, applyHandicap } from './logic.js';
 
 const EXPIRE_MS = 6 * 60 * 60 * 1000;   // 6 hours without activity
 const COUNTDOWN_MS = 3000;
@@ -119,9 +119,9 @@ export class Room {
 
   progress(me, m) {
     if (this.state.phase !== 'playing' || me.role !== 'player' || this.state.lockins[me.slot]) return;
-    const p = Math.min(1, Math.max(0, Number(m.p) || 0)), seq = Number(m.seq) || 0;
-    this.presence.set(me.slot, { state: 'thinking', p, seq });
-    this.broadcast({ t: 'presence', slot: me.slot, state: 'thinking', p, seq });
+    const p = Math.min(1, Math.max(0, Number(m.p) || 0)), seq = Number(m.seq) || 0, rows = cleanRows(m.rows);
+    this.presence.set(me.slot, { state: 'thinking', p, seq, ...(rows && { rows }) });
+    this.broadcast({ t: 'presence', slot: me.slot, state: 'thinking', p, seq, ...(rows && { rows }) });
   }
 
   async lockin(me, m) {
@@ -132,9 +132,10 @@ export class Room {
     const flags = plausibility({ score, lockedAt: now, startsAt: s.round.startsAt, maxScore: s.round.maxScore, minSec: s.round.minSec });
     const payload = JSON.stringify(m.payload ?? null).length <= 8192 ? m.payload ?? null : null;
     s.lockins[me.slot] = { score: Number.isFinite(score) ? score : 0, payload, lockedAt: now, flags };
-    this.presence.set(me.slot, { state: 'locked', p: 1, seq: this.presence.get(me.slot)?.seq ?? 0 });
+    const prev = this.presence.get(me.slot), rows = prev?.rows;
+    this.presence.set(me.slot, { state: 'locked', p: 1, seq: prev?.seq ?? 0, ...(rows && { rows }) });
     await this.save();
-    this.broadcast({ t: 'presence', slot: me.slot, state: 'locked', p: 1 });
+    this.broadcast({ t: 'presence', slot: me.slot, state: 'locked', p: 1, ...(rows && { rows }) });
     const players = s.players.filter((p) => p.role === 'player'), online = this.connectedTokens();
     if (players.filter((p) => online.has(p.token)).every((p) => s.lockins[p.slot])) await this.reveal('all-locked');
   }

@@ -9,7 +9,8 @@
     { "id": "factle", "name": "Factle", "path": "/factle/", "repo": "biccyanzac-pixel/factle" },
     { "id": "perceptle", "name": "Perceptle", "path": "/perceptle/", "repo": "biccyanzac-pixel/perceptle" },
     { "id": "stratle",   "name": "Stratle",   "path": "/stratle/",   "repo": "biccyanzac-pixel/stratle" },
-    { "id": "describle", "name": "Describle", "path": "/describle/", "repo": "biccyanzac-pixel/describle" }
+    { "id": "describle", "name": "Describle", "path": "/describle/", "repo": "biccyanzac-pixel/describle" },
+    { "id": "lettrle",   "name": "Lettrle",   "path": "/lettrle/",   "repo": "biccyanzac-pixel/lettrle" }
   ],
   "inDevelopment": []
 }
