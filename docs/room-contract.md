@@ -81,6 +81,39 @@ live, "3/6", green when solved), like Wordle in Discord. On the reveal, each pla
 score. The game itself should stay compact inside a room: Lettrle adds `in-room` to `<html>` and hides its masthead,
 leaderboard, archive and footer, so its grid and keyboard fit under the lobby's bar on a phone.
 
+## Example: Groupyle
+
+Groupyle sends how many groups the player has found and how many mistakes they've made. It **never** sends a word, a
+group's name or which words were picked: the other players are solving the same board.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `p` | number, 0–1 | Groups found ÷ groups on the board. |
+| `found` | integer | Groups found so far (0–4, or 0–5 on Sundays). |
+| `groups` | integer | Groups on the board: 4, or 5 on Sundays. |
+| `mistakes` | integer | Wrong guesses so far (0–4). A repeated guess doesn't count. |
+| `maxMistakes` | integer | 4: the game ends at the fourth mistake. |
+| `rows` | string[] | One row, one tile per group: `g` for found, `x` for not yet. Never words. |
+
+It posts `progress` when the board appears and after every guess, and `finish` when the last group is found or the
+fourth mistake is made (and `finish` with `already: true` when a finished game is loaded).
+
+The room `score` is **groups found, plus the mistakes left if the board was solved** (`roomScore` in
+`groupyle/site/js/daily.js`). So a solve always beats a fail, fewer mistakes beat more, and failing with more groups
+found beats failing with fewer. A solved board scores 5–8 (Sunday 6–9); an unsolved one scores 0–3 (0–4 on Sundays). The time isn't in the score: in a room everyone
+plays the same round, and ties share a place. The daily leaderboard still breaks ties by the server-timed time.
+
+```js
+// after a mistake and one found group
+{ jgg: 'room', type: 'progress', game: 'groupyle', day: '2026-10-24', p: 0.25, found: 1, groups: 4, mistakes: 1,
+  maxMistakes: 4, rows: ['gxxx'] }
+// solved with one mistake
+{ jgg: 'room', type: 'finish', game: 'groupyle', day: '2026-10-24', p: 1, found: 4, groups: 4, mistakes: 1,
+  maxMistakes: 4, rows: ['gggg'], score: 7, solved: true, ms: 95310, already: false }
+```
+
+Fallback selectors: `#done` and a hidden `<span id="room-score">` with the same score.
+
 ## Adding a game to Play together
 
 1. Add it to `GAMES` in `play/index.html`: `id`, `name`, `em` (an emoji), `min` (default round length in minutes),

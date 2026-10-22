@@ -198,6 +198,8 @@
       { id: 'ridd-le', name: 'ridd-le', em: '❓', min: 8, done: '#attempts-done', score: '#daily-score' },
       // Lettrle also posts live colour rows (docs/room-contract.md); #room-score is 6 for a first-guess solve down to 0
       { id: 'lettrle', name: 'Lettrle', em: '🟩', min: 4, archive: 'day', done: '#done', score: '#room-score', rows: 6 },
+      // Groupyle posts groups found and mistakes, never words (docs/room-contract.md); #room-score is groups found + mistakes left if solved
+      { id: 'groupyle', name: 'Groupyle', em: '🟪', min: 5, archive: 'day', done: '#done', score: '#room-score' },
     ];
     const $ = (id) => document.getElementById(id);
     const M = () => window.JGG?.motion;

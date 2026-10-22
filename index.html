@@ -26,6 +26,7 @@
       --strat-a: #ffc6d9;  --strat-b: #c2255c;
       --desc-a: #8ee6c8;   --desc-b: #3346c9;
       --lett-a: #fde68a;   --lett-b: #157a4a;
+      --grpy-a: #e4d6ff;   --grpy-b: #5a3fb4;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -107,6 +108,7 @@
     .strat .art  { background: linear-gradient(200deg, var(--strat-a), var(--strat-b)); }
     .desc .art   { background: linear-gradient(160deg, var(--desc-a), var(--desc-b)); }
     .lett .art   { background: linear-gradient(200deg, var(--lett-a), var(--lett-b)); }
+    .grpy .art   { background: linear-gradient(160deg, var(--grpy-a), var(--grpy-b)); }
     .body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .body h2 { margin: 0; font: 700 1.5rem/1.2 Georgia, "Times New Roman", serif; }
     .body p { margin: 0; color: var(--muted); }
@@ -329,6 +331,32 @@
         <div class="body">
           <h2>Lettrle</h2>
           <p>Guess the day's word in six tries. Green is the right spot, yellow is in the word. Common words on Monday, rarer by Saturday, six letters on Sunday.</p>
+        </div>
+      </a>
+      <a class="card grpy" data-game="groupyle" href="/groupyle/">
+        <span class="art" aria-hidden="true">
+          <svg viewBox="0 0 320 200">
+            <g stroke="none">
+              <rect x="72" y="18" width="178" height="32" rx="7" fill="#e9cf6a"/>
+              <rect x="72" y="50" width="178" height="28" rx="7" fill="#8fcf86" opacity=".95"/>
+              <rect x="72" y="84" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="118" y="84" width="40" height="32" rx="6" fill="#2a1d63" opacity=".9"/>
+              <rect x="164" y="84" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="210" y="84" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="72" y="122" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="118" y="122" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="164" y="122" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="210" y="122" width="40" height="32" rx="6" fill="#2a1d63" opacity=".9"/>
+              <rect x="72" y="160" width="40" height="32" rx="6" fill="#2a1d63" opacity=".9"/>
+              <rect x="118" y="160" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="164" y="160" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+              <rect x="210" y="160" width="40" height="32" rx="6" fill="#ffffff" opacity=".6"/>
+            </g>
+          </svg>
+        </span>
+        <div class="body">
+          <h2>Groupyle</h2>
+          <p>Sixteen words, four hidden groups of four. Four mistakes allowed. Obvious groups on Monday, sneaky look-alikes by Saturday, five groups on Sunday.</p>
         </div>
       </a>
     </div>
