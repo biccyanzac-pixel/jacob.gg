@@ -106,6 +106,31 @@ Every game page starts like this, with the kit loaded **before** the game's own 
 - `kit/demo.html` shows the kit on its own.
 - Pages must work at 360 px wide with no horizontal scroll, and in both light and dark.
 
+### UI and motion: every new or changed page
+
+Copying the components is not enough. Every new game, and every page or screen you add or change in an existing one,
+goes through the same UI and motion pass the whole site had in October 2026 (the record is
+[docs/ui-pass.md](docs/ui-pass.md)). Do it before opening the PR, not after the owner finds it flat.
+
+1. Read [docs/motion-system.md](docs/motion-system.md): the shared curves, durations, named transitions and
+   `JGG.motion`. Use the kit's tokens; never add a parallel set.
+2. Run these skills on the page, in this order (they're in `~/.claude/skills` on the owner's PC):
+   - `mobile-native`: phone baseline (tap flash, `:active` on every control, hover only for a mouse, 16px inputs,
+     safe areas, theme-color).
+   - `find-animation-opportunities`, then `animate` to build what it finds. `emil-design-eng` for the look.
+   - `break-ui`: long names, missing fields, huge numbers, RTL, at 320 px.
+   - `animation-performance` for anything that animates while the game runs.
+   - `review-animations` as the gate: fix what it finds and run it again until it passes.
+3. **The game's own feedback moments must animate.** The motion system's "what not to animate" list means typing,
+   taps and chrome the player sees dozens of times. It does not mean the payoff of a move. Revealing a guess or a
+   round's result, a solve or a fail, and an invalid move are seen a few times a game: give them a reveal (Lettrle:
+   tiles flip one by one, the row shakes on a refused word, the winning row hops, and the result screen waits until
+   the player has seen the final row).
+4. Look at it yourself: screenshots at 360 px and desktop, light and dark, and one frame captured mid-animation.
+   Check `prefers-reduced-motion` (colour and opacity only) in the headless e2e.
+
+If one of those skills isn't installed on the computer you're on, say so to the owner rather than skipping the step.
+
 `kit/jgg.js` gives you `window.JGG`:
 
 ```js
@@ -214,6 +239,8 @@ Pick the next free pair for a new game and add it here.
    (`https://<game>-leaderboard.jacob-gg-leaderboard-worker.workers.dev`) in the site's config.
 4. Tests: determinism/golden days, worker API e2e, a headless-Chrome e2e at 360 px and desktop (Playwright with
    the system Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`).
+4b. The UI and motion pass (section 3, "UI and motion"): the skills in order, the game's feedback moments animated,
+   screenshots looked at, reduced motion tested. Not optional, and before the PR.
 5. Hub: add the game to `games.json`, add a card (with `data-game="<id>"` and its own art and colour) to
    `index.html`, add its D1 binding to `worker/wrangler.toml` and its query to `worker/src/sources.js`, and add its
    display name to `NAMES` in `kit/jgg.js`. Redeploy the hub worker and push this repo. Update the README table.

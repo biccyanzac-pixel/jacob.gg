@@ -25,6 +25,10 @@ The essentials, in case you only skim:
 - Every page loads `https://biccyanzac-pixel.github.io/jacob.gg/kit/jgg.css` and `jgg.js` first. Use the
   masthead with the jacob.gg link, `JGG.levelChip(day)` on the intro, and `JGG.rate({ game, day, mount })` on the
   results screen.
+- Every new or changed page gets the UI and motion pass before its PR (PLAYBOOK.md section 3, "UI and motion"):
+  `docs/motion-system.md`, then the skills `mobile-native`, `find-animation-opportunities`/`animate`, `break-ui`,
+  `animation-performance` and `review-animations`. The game's own feedback moments (a guess or round reveal, a solve,
+  a refused move) must animate. Only typing, taps and chrome stay still.
 - A new game must also be added to the hub: `games.json`, a card in `index.html`, its D1 in
   `worker/wrangler.toml` and `worker/src/sources.js`, and `NAMES` in `kit/jgg.js`. Then redeploy the hub worker.
 - Free project: ask the owner before anything paid or any third-party analytics.

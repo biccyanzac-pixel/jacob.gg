@@ -75,8 +75,12 @@ While `settle` counts (at most 700 ms), the ticking number is `aria-hidden` and 
 
 ## What not to animate
 
-- Keyboard input, typed letters, tile taps and guess submissions, which are seen dozens of times a game. Use press
-  feedback at most.
+- Keyboard input, typed letters and tile taps, which are seen dozens of times a game. Use press feedback at most.
+  This is about the input itself. **The result of a move is not on this list:** a guess's colours, a round's
+  answer, a solve, a refused word are each seen a few times a game and are the game's payoff, so they get a reveal
+  (rule 7: gameplay motion keeps its own timing). Lettrle's tiles flip one by one (250 ms a tile, 80 ms stagger,
+  `--jgg-ease-in-out`), a refused row shakes (240 ms), and the solved row hops before the result screen. Skipping
+  these made the first Lettrle feel dead.
 - Leaderboard rows when the board refreshes. People are reading them.
 - The countdown clock, scores during play, and any number the player is reading off.
 - Anything that is the puzzle itself (Perceptle's stimuli, Predictle's physics, Pointle's pointing, Yogle's pose).
