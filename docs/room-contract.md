@@ -76,7 +76,10 @@ Lettrle uses `#done` and a hidden `<span id="room-score">` that holds the room s
   rows: ['xxyxx', 'yxgxx', 'gygxg', 'ggggg'], length: 5, max: 6, guesses: 4 }
 ```
 
-The lobby shows each player's newest row next to their dot in the play bar, and their whole grid on the reveal.
+While the round runs, the lobby shows a strip under its bar with everyone else's grid (name, colour rows filling in
+live, "3/6", green when solved), like Wordle in Discord. On the reveal, each player's whole grid sits next to their
+score. The game itself should stay compact inside a room: Lettrle adds `in-room` to `<html>` and hides its masthead,
+leaderboard, archive and footer, so its grid and keyboard fit under the lobby's bar on a phone.
 
 ## Example: Groupyle
 
@@ -115,6 +118,7 @@ Fallback selectors: `#done` and a hidden `<span id="room-score">` with the same 
 
 1. Add it to `GAMES` in `play/index.html`: `id`, `name`, `em` (an emoji), `min` (default round length in minutes),
    `archive` (the query parameter for an archive day, `'day'` or `'date'`, or leave it out for today only), and the
-   `done` and `score` selectors.
+   `done` and `score` selectors. For a word game that posts `rows`, also set `rows` (the most guesses, e.g. 6): it
+   turns on the live grids, and posting `length` with `progress` sets their width.
 2. Optionally post `progress` and `finish` as above. Test it inside an iframe on the same origin (Lettrle's
    `tools/e2e-ui.mjs` does this with a stub lobby page).

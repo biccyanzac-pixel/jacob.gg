@@ -73,8 +73,21 @@
     .bar .btn { padding: .4rem .7rem; font-size: .85rem; }
     .minidots { display: flex; gap: 3px; }
     .minidots .dot { width: .55rem; height: .55rem; }
-    .minidots { overflow: hidden; max-width: 50vw; }
-    .minidots .who { display: inline-flex; align-items: center; gap: 2px; }
+    .minidots { overflow: hidden; max-width: 40vw; }
+    /* everyone else's colour grids during a word game round */
+    .boards { display: flex; gap: .75rem; overflow-x: auto; overscroll-behavior-x: contain; padding: .45rem max(.75rem, env(safe-area-inset-left));
+      background: var(--surface); border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+    .boards[hidden] { display: none; }
+    .pb { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 3.6rem; }
+    .pb .nm { max-width: 5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; font-weight: 650; }
+    .pb .st { font-size: .66rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .pb.solved .nm, .pb.solved .st { color: var(--good); } .pb.out .st { color: var(--bad); }
+    .pg { display: grid; grid-template-columns: repeat(var(--cols), .62rem); gap: 2px; }
+    .pg i { width: .62rem; height: .62rem; border-radius: 2px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border);
+      transition: background-color var(--jgg-t-hover) ease; }
+    .pg i.g { background: var(--good); box-shadow: none; } .pg i.y { background: var(--warn); box-shadow: none; }
+    .pg i.x { background: color-mix(in srgb, var(--muted) 55%, var(--surface-2)); box-shadow: none; }
+    @media (prefers-reduced-motion: reduce) { .pg i { transition: none; } }
     /* colour rows from word games: never letters (docs/room-contract.md) */
     .strip { display: inline-flex; gap: 1px; }
     .strip i { width: .4rem; height: .4rem; border-radius: 1px; background: color-mix(in srgb, var(--muted) 55%, var(--surface-2)); }
@@ -163,6 +176,7 @@
       <span class="timer" id="timer" aria-live="off"></span>
       <button class="btn ghost" id="force" hidden>Reveal now</button>
     </div>
+    <div class="boards" id="boards" hidden aria-label="Everyone else's guesses (colours only)"></div>
     <div class="waiting" id="play-wait" hidden>Done! Waiting for the others…</div>
     <iframe id="frame" title="Game" allow="camera; microphone; geolocation; accelerometer; gyroscope; magnetometer; fullscreen; clipboard-write; web-share"></iframe>
   </div>
@@ -183,7 +197,7 @@
       { id: 'yogle', name: 'Yogle', em: '🧘', min: 4, archive: 'date', done: '#screen-result', score: '#result-score' },
       { id: 'ridd-le', name: 'ridd-le', em: '❓', min: 8, done: '#attempts-done', score: '#daily-score' },
       // Lettrle also posts live colour rows (docs/room-contract.md); #room-score is 6 for a first-guess solve down to 0
-      { id: 'lettrle', name: 'Lettrle', em: '🟩', min: 4, archive: 'day', done: '#done', score: '#room-score' },
+      { id: 'lettrle', name: 'Lettrle', em: '🟩', min: 4, archive: 'day', done: '#done', score: '#room-score', rows: 6 },
       // Groupyle posts groups found and mistakes, never words (docs/room-contract.md); #room-score is groups found + mistakes left if solved
       { id: 'groupyle', name: 'Groupyle', em: '🟪', min: 5, archive: 'day', done: '#done', score: '#room-score' },
     ];
@@ -381,7 +395,7 @@
     function spectate(round) { startPlay(round); playing.spectator = true; $('play-wait').hidden = false; $('play-wait').textContent = 'You\'re watching: results appear when everyone has finished.'; }
     function stopPlay() {
       clearInterval(timerId); clearInterval(watchId); playing = null;
-      $('s-play').hidden = true; $('frame').src = 'about:blank';
+      $('s-play').hidden = true; $('boards').hidden = true; $('frame').src = 'about:blank';
       document.documentElement.style.overflow = '';
     }
     function tickTimer() {
@@ -392,7 +406,24 @@
     function renderDots() {
       if (!room) return;
       $('minidots').innerHTML = room.players.filter((p) => p.role === 'player' && p.online)
-        .map((p) => `<span class="who" title="${esc(p.nickname)}"><span class="dot ${p.presence?.state === 'locked' ? 'locked' : 'playing'}"></span>${strip(p.presence?.rows?.at(-1))}</span>`).join('');
+        .map((p) => `<span class="dot ${p.presence?.state === 'locked' ? 'locked' : 'playing'}" title="${esc(p.nickname)}"></span>`).join('');
+      renderBoards();
+    }
+    // Word games (GAMES[].rows): everyone else's colour grid, filling in live, like Wordle in Discord. Colours only.
+    function renderBoards() {
+      const el = $('boards'), g = playing?.g;
+      if (!room || !g?.rows) { el.hidden = true; return; }
+      const others = room.players.filter((p) => p.role === 'player' && (p.online || p.presence?.rows?.length) && (playing.spectator || p.slot !== you?.slot));
+      const cols = playing.cols || others.map((p) => p.presence?.rows?.[0]?.length).find(Boolean) || 5;
+      el.innerHTML = others.map((p) => {
+        const rows = okRows(p.presence?.rows) ? p.presence.rows : [];
+        const solved = rows.some((r) => /^g+$/.test(r)), done = p.presence?.state === 'locked';
+        const tiles = Array.from({ length: g.rows }, (_, r) => (rows[r] || '').padEnd(cols, ' ').slice(0, cols))
+          .join('').split('').map((c) => `<i class="${c.trim()}"></i>`).join('');
+        return `<div class="pb${solved ? ' solved' : done ? ' out' : ''}" title="${esc(p.nickname)}"><span class="nm" dir="auto">${esc(p.nickname)}</span>
+          <span class="pg" style="--cols:${cols}">${tiles}</span><span class="st">${solved ? `${rows.length}/${g.rows}` : done ? `X/${g.rows}` : `${rows.length}/${g.rows}`}</span></div>`;
+      }).join('') || '<span class="muted">Waiting for players…</span>';
+      el.hidden = false;
     }
     $('force').onclick = () => send({ t: 'reveal' });
 
@@ -440,6 +471,7 @@
         clearTimeout(prog.timer);
         const wait = 500 - (now() - prog.last);
         wait <= 0 ? sendProgress() : (prog.timer = setTimeout(sendProgress, wait));
+      if (Number.isInteger(m.length) && m.length > 0 && m.length <= 8 && playing.cols !== m.length) { playing.cols = m.length; renderBoards(); }
       } else if (m.type === 'finish' && Number.isFinite(Number(m.score))) {
         prog.msg = { p: 1, rows: m.rows }; sendProgress();
         lockIn(Number(m.score), !!m.already, okRows(m.rows) ? m.rows : undefined);
